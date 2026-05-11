@@ -1,0 +1,52 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Question {
+  id          Int          @id @default(autoincrement())
+  type        String       // "Email" or "Academic"
+  title       String
+  content     String
+  submissions Submission[]
+  createdAt   DateTime     @default(now())
+}
+
+model Submission {
+  id          Int                  @id @default(autoincrement())
+  questionId  Int
+  question    Question             @relation(fields: [questionId], references: [id])
+  currentText String
+  latestScore Int?
+  revisions   SubmissionRevision[]
+  errorLogs   ErrorLog[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+}
+
+model SubmissionRevision {
+  id           Int        @id @default(autoincrement())
+  submissionId Int
+  submission   Submission @relation(fields: [submissionId], references: [id])
+  text         String
+  score        Int?
+  createdAt    DateTime   @default(now())
+}
+
+model ErrorLog {
+  id           Int        @id @default(autoincrement())
+  submissionId Int
+  submission   Submission @relation(fields: [submissionId], references: [id])
+  errorType    String     // "Grammar", "Spelling", etc.
+  incorrect    String
+  suggestion   String
+  explanation  String?
+  createdAt    DateTime   @default(now())
+}
