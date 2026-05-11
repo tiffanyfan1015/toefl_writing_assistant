@@ -15,6 +15,16 @@ async function main() {
         title: 'Environmental Impact of Tourism',
         content: 'Discuss the environmental impact of international tourism. Some argue that it brings economic benefits, while others worry about the ecological damage. What is your position?',
       },
+      {
+        type: 'Email',
+        title: 'Office Relocation Feedback',
+        content: 'The company is planning to move its office to a new location. Write an email to your manager providing feedback on the potential impact on your team\'s productivity.',
+      },
+      {
+        type: 'Academic',
+        title: 'Importance of Space Exploration',
+        content: 'Should governments continue to fund space exploration, or should those resources be redirected to pressing issues on Earth like poverty and climate change? Provide your perspective.',
+      },
     ],
   });
   console.log('Seeding finished.');

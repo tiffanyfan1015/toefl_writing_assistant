@@ -3,21 +3,23 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-
-export interface EvaluationResult {
+interface EvaluationResult {
   score: number;
   feedback: string;
-  errors: Array<{
-    type: string;
+  errors: {
+    type: "Grammar" | "Spelling";
     incorrect: string;
     suggestion: string;
     explanation: string;
-  }>;
+  }[];
 }
 
+// Move initialization inside the function or re-initialize to ensure env vars are fresh
 export async function evaluateEssay(prompt: string, essay: string): Promise<EvaluationResult> {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+  const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+  console.log(`Calling Gemini with model: ${modelName}`);
+  const model = genAI.getGenerativeModel({ model: modelName });
 
   const systemPrompt = `
     You are an expert TOEFL writing grader. Evaluate the following essay based on the prompt provided.

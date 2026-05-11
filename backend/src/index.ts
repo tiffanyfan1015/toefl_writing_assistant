@@ -30,6 +30,20 @@ app.get('/api/questions/:id', async (req, res) => {
   }
 });
 
+app.get('/api/questions/:id/latest-submission', async (req, res) => {
+  const submission = await prisma.submission.findFirst({
+    where: { questionId: parseInt(req.params.id) },
+    include: {
+      revisions: {
+        orderBy: { createdAt: 'desc' },
+      },
+      errorLogs: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+  res.json(submission);
+});
+
 app.post('/api/submissions', async (req, res) => {
   const { questionId, text } = req.body;
 
@@ -41,34 +55,73 @@ app.post('/api/submissions', async (req, res) => {
     return res.status(404).json({ error: 'Question not found' });
   }
 
+  let evaluation = null;
   try {
-    const evaluation = await evaluateEssay(question.content, text);
+    evaluation = await evaluateEssay(question.content, text);
+  } catch (error) {
+    console.error('Gemini Evaluation Failed:', error);
+    // Continue saving the draft even if AI fails
+  }
 
-    const submission = await prisma.submission.create({
-      data: {
-        questionId,
-        currentText: text,
-        latestScore: evaluation.score,
-        revisions: {
-          create: {
-            text,
-            score: evaluation.score,
-          },
-        },
-        errorLogs: {
-          create: evaluation.errors.map(err => ({
-            errorType: err.type,
-            incorrect: err.incorrect,
-            suggestion: err.suggestion,
-            explanation: err.explanation,
-          })),
-        },
-      },
-      include: {
-        revisions: true,
-        errorLogs: true,
-      },
+  try {
+    let submission = await prisma.submission.findFirst({
+      where: { questionId },
     });
+
+    if (submission) {
+      submission = await prisma.submission.update({
+        where: { id: submission.id },
+        data: {
+          currentText: text,
+          latestScore: evaluation?.score || null,
+          revisions: {
+            create: {
+              text,
+              score: evaluation?.score || null,
+            },
+          },
+          errorLogs: evaluation ? {
+            deleteMany: {},
+            create: evaluation.errors.map(err => ({
+              errorType: err.type,
+              incorrect: err.incorrect,
+              suggestion: err.suggestion,
+              explanation: err.explanation,
+            })),
+          } : undefined,
+        },
+        include: {
+          revisions: { orderBy: { createdAt: 'desc' } },
+          errorLogs: true,
+        },
+      });
+    } else {
+      submission = await prisma.submission.create({
+        data: {
+          questionId,
+          currentText: text,
+          latestScore: evaluation?.score || null,
+          revisions: {
+            create: {
+              text,
+              score: evaluation?.score || null,
+            },
+          },
+          errorLogs: evaluation ? {
+            create: evaluation.errors.map(err => ({
+              errorType: err.type,
+              incorrect: err.incorrect,
+              suggestion: err.suggestion,
+              explanation: err.explanation,
+            })),
+          } : undefined,
+        },
+        include: {
+          revisions: { orderBy: { createdAt: 'desc' } },
+          errorLogs: true,
+        },
+      });
+    }
 
     res.json({ submission, evaluation });
   } catch (error) {

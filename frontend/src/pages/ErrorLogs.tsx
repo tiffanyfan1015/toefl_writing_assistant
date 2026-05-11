@@ -20,7 +20,7 @@ const ErrorLogs = () => {
   const [logs, setLogs] = useState<ErrorLog[]>([]);
 
   useEffect(() => {
-    axios.get('http://localhost:3001/api/error-logs')
+    axios.get('http://localhost:3005/api/error-logs')
       .then(res => setLogs(res.data))
       .catch(err => console.error(err));
   }, []);
