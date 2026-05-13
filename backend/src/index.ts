@@ -67,7 +67,7 @@ app.delete('/api/questions/:id', async (req, res) => {
     // In our schema, we don't have cascade delete defined explicitly in Prisma, 
     // so we should delete submissions and revisions first.
     
-    await prisma.errorLog.deleteMany({ where: { submission: { questionId: id } } });
+    await prisma.errorLog.deleteMany({ where: { revision: { submission: { questionId: id } } } });
     await prisma.submissionRevision.deleteMany({ where: { submission: { questionId: id } } });
     await prisma.submission.deleteMany({ where: { questionId: id } });
     await prisma.question.delete({ where: { id } });
@@ -106,7 +106,7 @@ app.post('/api/submissions', async (req, res) => {
 
   let evaluation = null;
   try {
-    evaluation = await evaluateEssay(question.content, text);
+    evaluation = await evaluateEssay(question.type as "Email" | "Academic", question.content, text);
   } catch (error) {
     console.error('Gemini Evaluation Failed:', error);
   }
@@ -118,7 +118,7 @@ app.post('/api/submissions', async (req, res) => {
 
     const revisionData: any = {
       text,
-      score: evaluation?.score || null,
+      score: evaluation?.score ?? null,
       feedback: evaluation?.feedback || null,
     };
 
@@ -138,7 +138,7 @@ app.post('/api/submissions', async (req, res) => {
         where: { id: submission.id },
         data: {
           currentText: text,
-          latestScore: evaluation?.score || null,
+          latestScore: evaluation?.score ?? null,
           revisions: {
             create: revisionData,
           },
@@ -155,7 +155,7 @@ app.post('/api/submissions', async (req, res) => {
         data: {
           question: { connect: { id: questionId } },
           currentText: text,
-          latestScore: evaluation?.score || null,
+          latestScore: evaluation?.score ?? null,
           revisions: {
             create: revisionData,
           },
@@ -192,6 +192,26 @@ app.get('/api/error-logs', async (req, res) => {
     orderBy: { createdAt: 'desc' }
   });
   res.json(logs);
+});
+
+app.patch('/api/error-logs/:id/important', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { important } = req.body;
+
+  if (Number.isNaN(id) || typeof important !== 'boolean') {
+    return res.status(400).json({ error: 'Invalid important update payload' });
+  }
+
+  try {
+    const log = await prisma.errorLog.update({
+      where: { id },
+      data: { important },
+    });
+    res.json(log);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to update error importance' });
+  }
 });
 
 app.listen(port, '0.0.0.0', () => {

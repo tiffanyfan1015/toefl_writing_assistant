@@ -24,7 +24,7 @@ model Submission {
   questionId  Int
   question    Question             @relation(fields: [questionId], references: [id])
   currentText String
-  latestScore Int?
+  latestScore Float?
   revisions   SubmissionRevision[]
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
@@ -35,7 +35,7 @@ model SubmissionRevision {
   submissionId Int
   submission   Submission @relation(fields: [submissionId], references: [id])
   text         String
-  score        Int?
+  score        Float?
   feedback     String?
   errorLogs    ErrorLog[] // Moved here
   createdAt    DateTime   @default(now())
@@ -49,5 +49,6 @@ model ErrorLog {
   incorrect    String
   suggestion   String
   explanation  String?
+  important    Boolean            @default(false)
   createdAt    DateTime           @default(now())
 }

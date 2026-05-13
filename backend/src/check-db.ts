@@ -13,8 +13,10 @@ async function check() {
 
   const submissions = await prisma.submission.findMany({
     include: {
-      revisions: { orderBy: { createdAt: 'desc' } },
-      errorLogs: true,
+      revisions: {
+        orderBy: { createdAt: 'desc' },
+        include: { errorLogs: true },
+      },
       question: true
     }
   });
@@ -25,7 +27,7 @@ async function check() {
     console.log(`- Latest Score: ${s.latestScore || 'N/A'}`);
     console.log(`- Current Text Length: ${s.currentText.length} chars`);
     console.log(`- Revisions: ${s.revisions.length}`);
-    console.log(`- Error Logs: ${s.errorLogs.length}`);
+    console.log(`- Error Logs: ${s.revisions.reduce((total, revision) => total + revision.errorLogs.length, 0)}`);
     
     if (s.revisions.length > 0) {
       console.log(`  - Latest Revision Time: ${s.revisions[0]?.createdAt.toLocaleString()}`);

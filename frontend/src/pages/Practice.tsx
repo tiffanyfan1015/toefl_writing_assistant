@@ -85,6 +85,11 @@ const Practice = () => {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
+  const formatScore = (score: number | null) => {
+    if (score === null) return '-';
+    return Number.isInteger(score) ? score.toString() : score.toFixed(1);
+  };
+
   const handleSave = async () => {
     if (isEvaluating) return;
     setIsEvaluating(true);
@@ -197,9 +202,9 @@ const Practice = () => {
                         {new Date(rev.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
-                    {rev.score && (
+                    {rev.score !== null && (
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500 text-white`}>
-                        {rev.score}/5
+                        {formatScore(rev.score)}/5
                       </span>
                     )}
                   </button>
@@ -238,7 +243,7 @@ const Practice = () => {
                 <div className="card" style={{ borderLeft: '4px solid var(--color-primary)' }}>
                   <div className="flex items-center gap-6 mb-6 pb-6 border-b border-slate-100 dark:border-slate-800">
                     <div className="bg-primary text-white flex items-center justify-center text-3xl font-bold" style={{ width: '80px', height: '80px', borderRadius: '16px' }}>
-                      {currentReport.score}
+                      {formatScore(currentReport.score)}
                     </div>
                     <div>
                       <h2 className="text-xl font-bold text-slate-900 dark:text-white uppercase">Grading Report</h2>
