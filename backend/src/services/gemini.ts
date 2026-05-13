@@ -3,6 +3,44 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+interface QuestionResult {
+  title: string;
+  content: string;
+}
+
+export async function generateQuestion(type: "Email" | "Academic"): Promise<QuestionResult> {
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+  const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+  const model = genAI.getGenerativeModel({ model: modelName });
+
+  const systemPrompt = `
+    You are an expert TOEFL test creator. Generate a new TOEFL writing question for the specified type.
+    Return the result in strict JSON format as follows:
+    {
+      "title": "A short, descriptive title for the task",
+      "content": "The full text of the prompt, including all necessary context and instructions."
+    }
+    
+    IMPORTANT: Use double line breaks (\n\n) to separate paragraphs and different sections (like professor's question vs students' opinions) in the "content" field to ensure readability.
+    
+    If type is "Email", the prompt should involve responding to a professor or administrator about a course or school-related issue (7 minutes limit).
+    If type is "Academic", the prompt should be a discussion post where a professor asks a question and two students give brief opinions, and the user must contribute (100+ words).
+  `;
+
+  const fullPrompt = `${systemPrompt}\n\nType: ${type}`;
+
+  const result = await model.generateContent(fullPrompt);
+  const response = await result.response;
+  const text = response.text();
+  
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error("Failed to parse AI response as JSON");
+  }
+
+  return JSON.parse(jsonMatch[0]);
+}
+
 interface EvaluationResult {
   score: number;
   feedback: string;

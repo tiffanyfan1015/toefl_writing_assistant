@@ -26,7 +26,6 @@ model Submission {
   currentText String
   latestScore Int?
   revisions   SubmissionRevision[]
-  errorLogs   ErrorLog[]
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
 }
@@ -37,16 +36,18 @@ model SubmissionRevision {
   submission   Submission @relation(fields: [submissionId], references: [id])
   text         String
   score        Int?
+  feedback     String?
+  errorLogs    ErrorLog[] // Moved here
   createdAt    DateTime   @default(now())
 }
 
 model ErrorLog {
-  id           Int        @id @default(autoincrement())
-  submissionId Int
-  submission   Submission @relation(fields: [submissionId], references: [id])
-  errorType    String     // "Grammar", "Spelling", etc.
+  id           Int                @id @default(autoincrement())
+  revisionId   Int                // Changed from submissionId
+  revision     SubmissionRevision @relation(fields: [revisionId], references: [id])
+  errorType    String             // "Grammar", "Spelling", etc.
   incorrect    String
   suggestion   String
   explanation  String?
-  createdAt    DateTime   @default(now())
+  createdAt    DateTime           @default(now())
 }

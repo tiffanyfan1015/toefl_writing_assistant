@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { Edit3, Mail, MessageSquare } from 'lucide-react';
+import { Edit3, Mail, MessageSquare, Plus, Trash2, Sparkles, X, Loader2 } from 'lucide-react';
+import { API_BASE_URL } from '../api';
 
 interface Question {
   id: number;
@@ -12,52 +13,196 @@ interface Question {
 
 const Dashboard = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newQuestion, setNewQuestion] = useState({ type: 'Email', title: '', content: '' });
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchQuestions = () => {
+    setIsLoading(true);
+    axios.get(`${API_BASE_URL}/questions`)
+      .then(res => setQuestions(res.data))
+      .catch(err => console.error(err))
+      .finally(() => setIsLoading(false));
+  };
 
   useEffect(() => {
-    axios.get('http://localhost:3005/api/questions')
-      .then(res => setQuestions(res.data))
-      .catch(err => console.error(err));
+    fetchQuestions();
   }, []);
 
-  const emailQuestions = questions.filter(q => q.type === 'Email');
-  const academicQuestions = questions.filter(q => q.type === 'Academic');
+  const handleDelete = async (id: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this question?')) {
+      try {
+        await axios.delete(`${API_BASE_URL}/questions/${id}`);
+        fetchQuestions();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
+  const handleAdd = async (autoGenerate = false) => {
+    if (autoGenerate) setIsGenerating(true);
+    try {
+      await axios.post(`${API_BASE_URL}/questions`, {
+        ...newQuestion,
+        autoGenerate
+      });
+      setShowAddModal(false);
+      setNewQuestion({ type: 'Email', title: '', content: '' });
+      fetchQuestions();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to add question');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const renderSection = (title: string, icon: React.ReactNode, data: Question[]) => (
-    <section className="mb-12">
+    <div className="mb-12">
       <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(8, 145, 178, 0.1)', color: '#0891b2' }}>
-          {icon}
-        </div>
-        <h2 className="text-2xl font-bold">{title}</h2>
+        <div className="text-primary">{icon}</div>
+        <h2 className="text-xl font-bold text-slate-800 dark:text-white uppercase tracking-tight">{title}</h2>
       </div>
-      <div className="grid gap-6">
+      <div className="task-grid">
         {data.map(q => (
-          <div key={q.id} className="card flex flex-col md:flex-row justify-between items-start md:items-center gap-4 cursor-pointer">
-            <div className="flex-1">
-              <h3 className="text-xl font-bold mb-2 text-primary">{q.title}</h3>
-              <p className="text-sm opacity-80 line-clamp-2">{q.content}</p>
-            </div>
-            <Link to={`/practice/${q.id}`} className="w-full md:w-auto">
-              <button className="btn-primary w-full">
-                <Edit3 size={18} />
-                Practice Now
-              </button>
+          <div key={q.id} className="card task-card">
+            <Link to={`/practice/${q.id}`} className="flex-1">
+              <h3 className="task-card-title">{q.title}</h3>
+              <p className="task-card-copy">
+                {q.content}
+              </p>
             </Link>
+            <div className="task-card-actions">
+              <Link to={`/practice/${q.id}`} className="flex-1">
+                <button className="btn-primary w-full p-2 text-sm">
+                  <Edit3 size={16} />
+                  Practice
+                </button>
+              </Link>
+              <button 
+                onClick={(e) => handleDelete(q.id, e)}
+                style={{ background: 'transparent', color: 'var(--color-muted)', padding: '6px' }}
+              >
+                <Trash2 size={18} />
+              </button>
+            </div>
           </div>
         ))}
+        <div 
+          onClick={() => setShowAddModal(true)}
+          className="new-task-card"
+        >
+          <div className="new-task-icon">
+            <Plus size={26} />
+          </div>
+          <span className="new-task-title">New Task</span>
+          <span className="new-task-copy">Add a TOEFL email or academic prompt</span>
+        </div>
       </div>
-    </section>
+    </div>
   );
 
   return (
-    <div className="animate-in fade-in duration-700">
-      <header className="mb-12 text-center md:text-left">
-        <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">TOEFL Writing Pro</h1>
-        <p className="text-lg opacity-80">Master the writing section with AI-powered feedback and iteration.</p>
+    <div className="animate-fade">
+      <header className="mb-12 flex justify-between items-center bg-slate-900 text-white p-8 rounded-2xl shadow-xl">
+        <div>
+          <h1 className="text-3xl font-black mb-1">Practice Dashboard</h1>
+          <p className="text-white/60 text-sm font-medium uppercase tracking-widest">Master TOEFL Writing</p>
+        </div>
+        <button 
+          onClick={() => setShowAddModal(true)}
+          className="btn-cta shadow-lg"
+        >
+          <Plus size={20} />
+          Create Task
+        </button>
       </header>
       
-      {renderSection('Email Tasks (7 minutes)', <Mail size={24} />, emailQuestions)}
-      {renderSection('Academic Discussion', <MessageSquare size={24} />, academicQuestions)}
+      {isLoading ? (
+        <div className="flex justify-center p-12">
+          <Loader2 className="animate-spin text-primary" size={40} />
+        </div>
+      ) : (
+        <>
+          {renderSection('Email Response', <Mail size={22} />, questions.filter(q => q.type === 'Email'))}
+          {renderSection('Academic Discussion', <MessageSquare size={22} />, questions.filter(q => q.type === 'Academic'))}
+        </>
+      )}
+
+      {showAddModal && (
+        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <p className="modal-eyebrow">Practice Library</p>
+                <h2 className="modal-title">New Writing Task</h2>
+              </div>
+              <button className="icon-button" onClick={() => setShowAddModal(false)} aria-label="Close modal">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">Task Type</label>
+                <div className="segmented-control">
+                  {['Email', 'Academic'].map(type => (
+                    <button
+                      key={type}
+                      onClick={() => setNewQuestion({...newQuestion, type})}
+                      className={`segment-button ${newQuestion.type === type ? 'is-active' : ''}`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="form-group">
+                <button
+                  onClick={() => handleAdd(true)}
+                  disabled={isGenerating}
+                  className="generate-button"
+                >
+                  {isGenerating ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
+                  <span className="font-bold">{isGenerating ? 'AI Generating...' : 'Auto-generate Topic'}</span>
+                </button>
+              </div>
+
+              <div className="modal-divider">
+                <span>OR ENTER MANUALLY</span>
+              </div>
+
+              <div className="manual-entry">
+                <input
+                  type="text"
+                  className="form-field"
+                  placeholder="Topic Title"
+                  value={newQuestion.title}
+                  onChange={e => setNewQuestion({...newQuestion, title: e.target.value})}
+                />
+                <textarea
+                  className="form-field form-textarea"
+                  placeholder="Paste prompt content here..."
+                  value={newQuestion.content}
+                  onChange={e => setNewQuestion({...newQuestion, content: e.target.value})}
+                />
+                <button
+                  onClick={() => handleAdd(false)}
+                  disabled={!newQuestion.title || !newQuestion.content}
+                  className="btn-cta w-full create-task-button"
+                >
+                  Create Task
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
