@@ -1,5 +1,6 @@
 # IDE & Tooling
 .gemini
+.codex
 .vscode
 .idea
 *.swp
