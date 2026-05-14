@@ -142,13 +142,13 @@ const Practice = () => {
             </div>
           </div>
         </div>
-        <div className="card flex items-center gap-4 py-3 px-6 shadow-sm border border-primary/10">
-          <Timer size={20} className={timeLeft < 60 ? 'text-red-500 animate-pulse' : 'text-primary'} />
-          <span className={`text-2xl font-bold font-mono ${timeLeft < 60 ? 'text-red-500' : ''}`}>{formatTime(timeLeft)}</span>
+        <div className="timer-card">
+          <Timer size={17} className={timeLeft < 60 ? 'text-red-500 animate-pulse' : 'text-primary'} />
+          <span className={`timer-text ${timeLeft < 60 ? 'text-red-500' : ''}`}>{formatTime(timeLeft)}</span>
         </div>
       </div>
 
-      <div className="grid lg-grid-cols-12 gap-8 items-start">
+      <div className="grid lg-grid-cols-12 practice-workspace items-start">
         <div className="lg-span-4 flex flex-col gap-6">
           <div className={`prompt-panel ${question.type === 'Academic' ? 'prompt-panel-academic' : 'prompt-panel-email'}`}>
             {question.type === 'Academic' ? (
@@ -214,16 +214,15 @@ const Practice = () => {
           )}
         </div>
 
-        <div className="lg-span-8 flex flex-col gap-6">
-          <div className="relative group">
+        <div className="lg-span-8 practice-editor-stack">
+          <div className="essay-editor-shell">
             <textarea
-              style={{ minHeight: '500px', width: '100%', padding: '24px', borderRadius: '16px', border: '1px solid var(--color-border)', background: 'var(--color-card-bg)', color: 'inherit', outline: 'none', fontSize: '1rem', lineHeight: '1.6', transition: 'all 0.3s' }}
-              className="focus:border-primary focus:shadow-sm"
+              className="essay-textarea"
               placeholder="Start your TOEFL essay here..."
               value={text}
               onChange={(e) => setText(e.target.value)}
             />
-            <div className="absolute bottom-4 right-4 text-[10px] font-bold text-muted bg-slate-50 dark:bg-slate-900 px-3 py-1.5 rounded-full border border-slate-100 dark:border-slate-800">
+            <div className="word-count-badge">
               {text.trim() ? text.trim().split(/\s+/).length : 0} WORDS
             </div>
           </div>
@@ -231,7 +230,7 @@ const Practice = () => {
           <button
             onClick={handleSave}
             disabled={isEvaluating || !text.trim()}
-            className="btn-cta w-full py-4 text-lg font-bold"
+            className="btn-cta w-full grade-button"
           >
             {isEvaluating ? <Loader2 className="animate-spin" size={24} /> : <Sparkles size={24} />}
             {isEvaluating ? 'AI EVALUATING...' : 'SAVE & GRADE'}

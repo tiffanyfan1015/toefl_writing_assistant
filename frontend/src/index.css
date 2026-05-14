@@ -439,6 +439,90 @@ nav.main-nav {
   line-height: 1.72;
 }
 
+.timer-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(8, 145, 178, 0.14);
+  border-radius: 12px;
+  background: var(--color-card-bg);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.timer-text {
+  font-family: 'Fira Code', monospace;
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.practice-workspace {
+  gap: 36px;
+}
+
+.practice-editor-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.essay-editor-shell {
+  position: relative;
+  padding: 18px;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: var(--color-card-bg);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.essay-textarea {
+  width: 100%;
+  min-height: 500px;
+  box-sizing: border-box;
+  padding: 28px 28px 64px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  outline: none;
+  resize: vertical;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.65;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.essay-textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(8, 145, 178, 0.1);
+}
+
+.word-count-badge {
+  position: absolute;
+  right: 34px;
+  bottom: 34px;
+  padding: 7px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: #f8fafc;
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.grade-button {
+  min-height: 64px;
+  border-radius: 14px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  
+}
+
 .error-log-header {
   display: flex;
   align-items: flex-start;
@@ -820,6 +904,8 @@ nav.main-nav {
 .items-center { align-items: center; }
 .justify-between { justify-content: space-between; }
 .grid { display: grid; }
+.gap-2 { gap: 4px; }
+.gap-3 { gap: 8px; }
 .gap-4 { gap: 16px; }
 .gap-6 { gap: 24px; }
 .w-full { width: 100%; }
@@ -951,6 +1037,34 @@ button:disabled {
     font-size: 1rem;
   }
 
+  .practice-workspace {
+    gap: 24px;
+  }
+
+  .essay-editor-shell {
+    padding: 12px;
+  }
+
+  .essay-textarea {
+    min-height: 420px;
+    padding: 20px 20px 58px;
+  }
+
+  .word-count-badge {
+    right: 24px;
+    bottom: 24px;
+  }
+
+  .timer-card {
+    padding: 9px 12px;
+    margin-bottom: 12px;
+  }
+
+  .timer-text {
+    font-size: 1rem;
+  }
+
+
   .error-log-header {
     flex-direction: column;
   }
@@ -999,6 +1113,12 @@ button:disabled {
   }
   .prompt-panel-academic {
     border-color: var(--color-border);
+  }
+  .essay-textarea {
+    background: #0f172a;
+  }
+  .word-count-badge {
+    background: #111827;
   }
   .filter-count,
   .error-edit-card,
