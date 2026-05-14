@@ -55,7 +55,10 @@ app.post('/api/questions', async (req, res) => {
     res.json(question);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to create question' });
+    res.status(500).json({
+      error: 'Failed to create question',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    });
   }
 });
 

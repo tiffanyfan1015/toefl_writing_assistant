@@ -8,37 +8,72 @@ interface QuestionResult {
   content: string;
 }
 
+function parseJsonObject<T>(text: string): T {
+  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error(`Failed to parse AI response as JSON. Response: ${text.slice(0, 300)}`);
+  }
+
+  try {
+    return JSON.parse(jsonMatch[0]);
+  } catch (error) {
+    throw new Error(`Failed to parse AI JSON: ${(error as Error).message}. Response: ${text.slice(0, 300)}`);
+  }
+}
+
 export async function generateQuestion(type: "Email" | "Academic"): Promise<QuestionResult> {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
   const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
-  const model = genAI.getGenerativeModel({ model: modelName });
+  const model = genAI.getGenerativeModel({
+    model: modelName,
+    generationConfig: {
+      responseMimeType: "application/json",
+    },
+  });
 
   const systemPrompt = `
-    You are an expert TOEFL test creator. Generate a new TOEFL writing question for the specified type.
-    Return the result in strict JSON format as follows:
+    You are a senior TOEFL test developer specialized in English for Academic Purposes (EAP). Your goal is to generate a realistic writing prompt.
+    Return one valid JSON object only. Do not include markdown fences, commentary, or text outside the JSON object.
+    The JSON must be parseable by JSON.parse. Escape all newline characters inside string values as \\n.
+
+    JSON STRUCTURE:
     {
-      "title": "A short, descriptive title for the task",
-      "content": "The full text of the prompt, including all necessary context and instructions."
+      "title": "Title of the task",
+      "content": "Full prompt text"
     }
-    
-    IMPORTANT: Use double line breaks (\n\n) to separate paragraphs and different sections (like professor's question vs students' opinions) in the "content" field to ensure readability.
-    
-    If type is "Email", the prompt should involve responding to a professor or administrator about a course or school-related issue (7 minutes limit).
-    If type is "Academic", the prompt should be a discussion post where a professor asks a question and two students give brief opinions, and the user must contribute (100+ words).
-  `;
+
+    TASK SPECIFICATIONS:
+    1. "Email" Type:
+      - Scenario: Communicating with a university professor or administrator.
+      - Requirement: Include 3 specific bulleted tasks (e.g., explain a problem, request a meeting, propose a solution).
+      - Tone: Formal and professional.
+
+    2. "Academic" Type (Discussion Board):
+      - Format: A professor posts a question followed by two brief student responses (Student A and Student B).
+      - Requirement: The user must add their own perspective, agreeing/disagreeing or adding new insight.
+      - Tone: Academic yet conversational.
+
+    CONTENT FORMATTING:
+    Use double line breaks (\\n\\n) to clearly separate:
+    - The general instructions.
+    - The professor's post (for Academic).
+    - The individual student viewpoints (for Academic).
+    - The specific bullet points (for Email).
+    `;
 
   const fullPrompt = `${systemPrompt}\n\nType: ${type}`;
 
   const result = await model.generateContent(fullPrompt);
   const response = await result.response;
   const text = response.text();
-  
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error("Failed to parse AI response as JSON");
+
+  const parsed = parseJsonObject<QuestionResult>(text);
+  if (!parsed.title || !parsed.content) {
+    throw new Error(`AI response is missing title or content. Response: ${text.slice(0, 300)}`);
   }
 
-  return JSON.parse(jsonMatch[0]);
+  return parsed;
 }
 
 interface EvaluationResult {
@@ -121,13 +156,7 @@ export async function evaluateEssay(taskType: "Email" | "Academic", prompt: stri
   const response = await result.response;
   const text = response.text();
   
-  // Basic JSON extraction in case there's markdown wrapping
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error("Failed to parse AI response as JSON");
-  }
-
-  const parsed = JSON.parse(jsonMatch[0]);
+  const parsed = parseJsonObject<EvaluationResult>(text);
   const rawScore = Number(parsed.score);
   const boundedScore = Math.min(5, Math.max(0, Number.isFinite(rawScore) ? rawScore : 0));
 

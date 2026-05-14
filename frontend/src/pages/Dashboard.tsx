@@ -55,7 +55,10 @@ const Dashboard = () => {
       fetchQuestions();
     } catch (err) {
       console.error(err);
-      alert('Failed to add question');
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.details || err.response?.data?.error || err.message
+        : 'Failed to add question';
+      alert(`Failed to add question: ${message}`);
     } finally {
       setIsGenerating(false);
     }
