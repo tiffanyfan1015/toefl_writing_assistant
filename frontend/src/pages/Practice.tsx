@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import { Timer, ChevronRight, AlertTriangle, History, CheckCircle2, Loader2, Sparkles, BookOpen } from 'lucide-react';
+import { Timer, ChevronRight, AlertTriangle, History, CheckCircle2, Loader2, Sparkles, BookOpen, Star } from 'lucide-react';
 import ReactDiffViewer from 'react-diff-viewer-continued';
 import { API_BASE_URL } from '../api';
 
@@ -13,10 +13,12 @@ interface Question {
 }
 
 interface ErrorLog {
+  id: number;
   type: string;
   incorrect: string;
   suggestion: string;
   explanation: string;
+  important: boolean;
 }
 
 interface Revision {
@@ -36,6 +38,7 @@ const Practice = () => {
   const [selectedRevision, setSelectedRevision] = useState<Revision | null>(null);
   const [timeLeft, setTimeLeft] = useState(420);
   const [isEvaluating, setIsEvaluating] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [revisions, setRevisions] = useState<Revision[]>([]);
   const timerRef = useRef<number | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -57,10 +60,12 @@ const Practice = () => {
           const mappedRevisions = res.data.revisions.map((rev: any) => ({
             ...rev,
             errorLogs: rev.errorLogs.map((err: any) => ({
+              id: err.id,
               type: err.errorType,
               incorrect: err.incorrect,
               suggestion: err.suggestion,
-              explanation: err.explanation
+              explanation: err.explanation,
+              important: err.important ?? false
             }))
           }));
           setRevisions(mappedRevisions);
@@ -100,13 +105,15 @@ const Practice = () => {
       });
       const mappedRevisions = res.data.submission.revisions.map((rev: any) => ({
         ...rev,
-        errorLogs: rev.errorLogs.map((err: any) => ({
-          type: err.errorType,
-          incorrect: err.incorrect,
-          suggestion: err.suggestion,
-          explanation: err.explanation
-        }))
-      }));
+            errorLogs: rev.errorLogs.map((err: any) => ({
+              id: err.id,
+              type: err.errorType,
+              incorrect: err.incorrect,
+              suggestion: err.suggestion,
+              explanation: err.explanation,
+              important: err.important ?? false
+            }))
+          }));
       setRevisions(mappedRevisions);
       setSelectedRevision(mappedRevisions[0]);
       
@@ -121,6 +128,35 @@ const Practice = () => {
       console.error(err);
     } finally {
       setIsEvaluating(false);
+    }
+  };
+
+  const toggleImportant = async (errorLog: ErrorLog) => {
+    const nextImportant = !errorLog.important;
+    setSaveError('');
+
+    const updateLogs = (logs: ErrorLog[] | undefined) =>
+      logs?.map(item => (item.id === errorLog.id ? { ...item, important: nextImportant } : item));
+
+    setRevisions(prev => prev.map(rev => ({ ...rev, errorLogs: updateLogs(rev.errorLogs) })));
+    setSelectedRevision(prev => (prev ? { ...prev, errorLogs: updateLogs(prev.errorLogs) } : prev));
+
+    try {
+      const res = await axios.patch(`${API_BASE_URL}/error-logs/${errorLog.id}/important`, {
+        important: nextImportant,
+      });
+      const savedImportant = res.data.important;
+      const persistLogs = (logs: ErrorLog[] | undefined) =>
+        logs?.map(item => (item.id === errorLog.id ? { ...item, important: savedImportant } : item));
+      setRevisions(prev => prev.map(rev => ({ ...rev, errorLogs: persistLogs(rev.errorLogs) })));
+      setSelectedRevision(prev => (prev ? { ...prev, errorLogs: persistLogs(prev.errorLogs) } : prev));
+    } catch (err) {
+      console.error(err);
+      const rollbackLogs = (logs: ErrorLog[] | undefined) =>
+        logs?.map(item => (item.id === errorLog.id ? { ...item, important: errorLog.important } : item));
+      setRevisions(prev => prev.map(rev => ({ ...rev, errorLogs: rollbackLogs(rev.errorLogs) })));
+      setSelectedRevision(prev => (prev ? { ...prev, errorLogs: rollbackLogs(prev.errorLogs) } : prev));
+      setSaveError('Could not save the star. Please restart the backend if the Prisma schema was just updated.');
     }
   };
 
@@ -269,19 +305,27 @@ const Practice = () => {
                       <AlertTriangle size={16} className="text-amber-500" />
                       LINGUISTIC CORRECTIONS
                     </h3>
+                    {saveError && <div className="save-error">{saveError}</div>}
                     <div className="grid gap-4">
                       {!currentReport.errorLogs || currentReport.errorLogs.length === 0 ? (
                         <div className="p-8 text-center border-2 border-dashed border-emerald-100 dark:border-emerald-900/10 rounded-2xl">
                           <p className="text-emerald-600 font-bold">No errors detected!</p>
                         </div>
                       ) : (
-                        currentReport.errorLogs.map((err, i) => (
-                          <div key={i} className="p-4 rounded-xl border bg-white dark:bg-slate-900 shadow-sm" style={{ borderColor: 'var(--color-border)' }}>
+                        currentReport.errorLogs.map((err) => (
+                          <div key={err.id} className="p-4 rounded-xl border bg-white dark:bg-slate-900 shadow-sm" style={{ borderColor: 'var(--color-border)' }}>
                             <div className="flex flex-wrap items-center gap-3 mb-2">
                               <span className="px-2 py-0.5 bg-red-50 dark:bg-red-900/20 text-red-500 text-[10px] font-bold uppercase rounded border border-red-100 dark:border-red-900/20">{err.type}</span>
                               <span style={{ color: '#ef4444', textDecoration: 'line-through' }} className="font-medium opacity-50">{err.incorrect}</span>
                               <ChevronRight size={14} className="text-muted" />
                               <span className="text-emerald-500 font-bold text-lg">{err.suggestion}</span>
+                              <button
+                                className={`star-button ${err.important ? 'is-important' : ''}`}
+                                onClick={() => toggleImportant(err)}
+                                aria-label={err.important ? 'Remove important mark' : 'Mark as important'}
+                              >
+                                <Star size={16} />
+                              </button>
                             </div>
                             <p className="text-xs text-muted italic">
                               {err.explanation}
