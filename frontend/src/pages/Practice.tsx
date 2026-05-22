@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Timer, ChevronRight, AlertTriangle, History, CheckCircle2, Loader2, Sparkles, BookOpen, Star } from 'lucide-react';
@@ -56,10 +57,11 @@ const Practice = () => {
         }
       })
       .catch((err) => {
-        if (!controller.signal.aborted) {
-          console.error(err);
-          setLoadError('Could not load your saved work. Check that the backend is running.');
-        }
+        if (controller.signal.aborted) return;
+        // No submission yet is normal for a first visit to this question.
+        if (axios.isAxiosError(err) && err.response?.status === 404) return;
+        console.error(err);
+        setLoadError('Could not load your saved work. Check that the backend is running.');
       });
 
     timerRef.current = window.setInterval(() => {
