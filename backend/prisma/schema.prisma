@@ -52,3 +52,52 @@ model ErrorLog {
   important    Boolean            @default(false)
   createdAt    DateTime           @default(now())
 }
+
+model SpeakingQuestion {
+  id           Int                @id @default(autoincrement())
+  title        String
+  introduction String
+  question1    String
+  question2    String
+  question3    String
+  question4    String
+  sessions     SpeakingSession[]
+  createdAt    DateTime           @default(now())
+}
+
+model SpeakingSession {
+  id         Int                   @id @default(autoincrement())
+  questionId Int
+  question   SpeakingQuestion      @relation(fields: [questionId], references: [id])
+  parts      SpeakingAttemptPart[]
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+}
+
+model SpeakingAttemptPart {
+  id            Int                  @id @default(autoincrement())
+  sessionId     Int
+  session       SpeakingSession      @relation(fields: [sessionId], references: [id])
+  partIndex     Int
+  audioPath     String
+  audioMimeType String?
+  transcript    String
+  score         Float?
+  feedback      String?
+  errorLogs     SpeakingErrorLog[]
+  createdAt     DateTime             @default(now())
+
+  @@unique([sessionId, partIndex])
+}
+
+model SpeakingErrorLog {
+  id          Int                 @id @default(autoincrement())
+  partId      Int
+  part        SpeakingAttemptPart @relation(fields: [partId], references: [id])
+  errorType   String
+  incorrect   String
+  suggestion  String
+  explanation String?
+  important   Boolean             @default(false)
+  createdAt   DateTime            @default(now())
+}

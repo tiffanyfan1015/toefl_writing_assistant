@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -6,6 +6,33 @@ dotenv.config();
 interface QuestionResult {
   title: string;
   content: string;
+}
+
+interface SpeakingQuestionResult {
+  title: string;
+  introduction: string;
+  question1: string;
+  question2: string;
+  question3: string;
+  question4: string;
+}
+
+interface SpeakingEvaluationResult {
+  score: number;
+  feedback: string;
+  errors: {
+    type:
+      | 'Pronunciation and Intelligibility'
+      | 'Fluency and Pausing'
+      | 'Rhythm and Intonation'
+      | 'Grammar and Word Choice'
+      | 'Elaboration'
+      | 'Idiomatic Word Choice'
+      | 'Task Relevance and Content Development';
+    incorrect: string;
+    suggestion: string;
+    explanation: string;
+  }[];
 }
 
 function parseJsonObject<T>(text: string): T {
@@ -22,15 +49,59 @@ function parseJsonObject<T>(text: string): T {
   }
 }
 
-export async function generateQuestion(type: "Email" | "Academic"): Promise<QuestionResult> {
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-  const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
-  const model = genAI.getGenerativeModel({
-    model: modelName,
-    generationConfig: {
-      responseMimeType: "application/json",
-    },
-  });
+const FALLBACK_GEMINI_MODEL = 'gemini-flash-latest';
+
+function uniqueStrings(values: Array<string | undefined>) {
+  return Array.from(new Set(values.map((value) => value?.trim()).filter((value): value is string => Boolean(value))));
+}
+
+function parseGeminiModelConfig() {
+  const envOptions = uniqueStrings((process.env.GEMINI_MODEL_OPTIONS || '').split(','));
+  const envModel = process.env.GEMINI_MODEL?.trim();
+  const envDefault = process.env.GEMINI_MODEL_DEFAULT?.trim();
+  const defaultModel = envDefault || envModel || envOptions[0] || FALLBACK_GEMINI_MODEL;
+  const options = uniqueStrings([
+    ...envOptions,
+    defaultModel,
+    envModel,
+    FALLBACK_GEMINI_MODEL,
+  ]);
+
+  return {
+    options,
+    defaultModel: options.includes(defaultModel) ? defaultModel : options[0] || FALLBACK_GEMINI_MODEL,
+  };
+}
+
+const geminiModelConfig = parseGeminiModelConfig();
+
+export function getGeminiModelConfig() {
+  return geminiModelConfig;
+}
+
+export function resolveGeminiModel(modelName?: string | null) {
+  const requested = modelName?.trim();
+  if (requested && geminiModelConfig.options.includes(requested)) {
+    return requested;
+  }
+  return geminiModelConfig.defaultModel;
+}
+
+function getModel(responseMimeType?: string, modelName?: string) {
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+  const modelParams: { model: string; generationConfig?: { responseMimeType: string } } = {
+    model: resolveGeminiModel(modelName),
+  };
+
+  if (responseMimeType) {
+    modelParams.generationConfig = { responseMimeType };
+  }
+
+  return genAI.getGenerativeModel(modelParams);
+}
+
+export async function generateQuestion(type: 'Email' | 'Academic', modelName?: string): Promise<QuestionResult> {
+  const model = getModel('application/json', modelName);
 
   const systemPrompt = `
     You are a senior TOEFL test developer specialized in English for Academic Purposes (EAP). Your goal is to generate a realistic writing prompt.
@@ -60,10 +131,9 @@ export async function generateQuestion(type: "Email" | "Academic"): Promise<Ques
     - The professor's post (for Academic).
     - The individual student viewpoints (for Academic).
     - The specific bullet points (for Email).
-    `;
+  `;
 
   const fullPrompt = `${systemPrompt}\n\nType: ${type}`;
-
   const result = await model.generateContent(fullPrompt);
   const response = await result.response;
   const text = response.text();
@@ -76,29 +146,64 @@ export async function generateQuestion(type: "Email" | "Academic"): Promise<Ques
   return parsed;
 }
 
+export async function generateSpeakingQuestion(modelName?: string): Promise<SpeakingQuestionResult> {
+  const model = getModel('application/json', modelName);
+
+  const systemPrompt = `
+    You are a senior TOEFL speaking item writer.
+    Return one valid JSON object only. No markdown fences, no commentary, no extra text.
+
+    JSON STRUCTURE:
+    {
+      "title": "Short topic title",
+      "introduction": "A short interviewer introduction that sets up the interview topic.",
+      "question1": "Personal recall question.",
+      "question2": "Emotional reaction or preference question.",
+      "question3": "Opinion with support question.",
+      "question4": "Policy or prediction question."
+    }
+
+    RULES:
+    - All four questions must be about the same topic.
+    - Keep the topic realistic for TOEFL interview style.
+    - Question 1 should ask about a specific past experience.
+    - Question 2 should ask about feelings, habits, or reactions.
+    - Question 3 should ask for an opinion with reasons.
+    - Question 4 should ask about a broader policy, change, or prediction.
+    - Keep the introduction natural and concise.
+  `;
+
+  const result = await model.generateContent(systemPrompt);
+  const response = await result.response;
+  const text = response.text();
+  const parsed = parseJsonObject<SpeakingQuestionResult>(text);
+
+  if (!parsed.title || !parsed.introduction || !parsed.question1 || !parsed.question2 || !parsed.question3 || !parsed.question4) {
+    throw new Error(`AI response is missing speaking fields. Response: ${text.slice(0, 300)}`);
+  }
+
+  return parsed;
+}
+
 interface EvaluationResult {
   score: number;
   feedback: string;
   errors: {
     type:
-      | "Grammar and Spelling"
-      | "Elaboration"
-      | "Tone and Social Conventions"
-      | "Adherence to Task"
-      | "Idiomatic Word Choice"
-      | "Relevance to Discussion";
+      | 'Grammar and Spelling'
+      | 'Elaboration'
+      | 'Tone and Social Conventions'
+      | 'Adherence to Task'
+      | 'Idiomatic Word Choice'
+      | 'Relevance to Discussion';
     incorrect: string;
     suggestion: string;
     explanation: string;
   }[];
 }
 
-// Move initialization inside the function or re-initialize to ensure env vars are fresh
-export async function evaluateEssay(taskType: "Email" | "Academic", prompt: string, essay: string): Promise<EvaluationResult> {
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-  const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
-  console.log(`Calling Gemini with model: ${modelName}`);
-  const model = genAI.getGenerativeModel({ model: modelName });
+export async function evaluateEssay(taskType: 'Email' | 'Academic', prompt: string, essay: string, modelName?: string): Promise<EvaluationResult> {
+  const model = getModel('application/json', modelName);
 
   const emailRubric = `
     Email rubric:
@@ -123,7 +228,7 @@ export async function evaluateEssay(taskType: "Email" | "Academic", prompt: stri
   const systemPrompt = `
     You are an expert TOEFL writing grader. Evaluate the response based on the provided TOEFL ${taskType} task and its official-style rubric.
     Use the rubric below and provide a score from 0 to 5 in 0.5-point increments only.
-    ${taskType === "Email" ? emailRubric : academicRubric}
+    ${taskType === 'Email' ? emailRubric : academicRubric}
 
     Identify edits and improvement opportunities by these exact categories only:
     - "Grammar and Spelling": grammar, spelling, punctuation, word form, agreement, tense, sentence mechanics.
@@ -155,8 +260,96 @@ export async function evaluateEssay(taskType: "Email" | "Academic", prompt: stri
   const result = await model.generateContent(fullPrompt);
   const response = await result.response;
   const text = response.text();
-  
+
   const parsed = parseJsonObject<EvaluationResult>(text);
+  const rawScore = Number(parsed.score);
+  const boundedScore = Math.min(5, Math.max(0, Number.isFinite(rawScore) ? rawScore : 0));
+
+  return {
+    ...parsed,
+    score: Math.round(boundedScore * 2) / 2,
+  };
+}
+
+export async function transcribeSpeakingAudio(audioBuffer: Buffer, mimeType: string, modelName?: string): Promise<{ transcript: string }> {
+  const model = getModel('application/json', modelName);
+  const audioBase64 = audioBuffer.toString('base64');
+
+  const prompt = `
+    You are a transcription engine for TOEFL speaking responses.
+    Transcribe the spoken English in the audio as accurately as possible.
+    Return strict JSON only with this shape:
+    { "transcript": "..." }
+
+    Rules:
+    - Preserve the speaker's words as closely as possible.
+    - Do not add commentary or timestamps.
+    - If speech is unclear, write the best possible approximation.
+    - If the audio is empty or unintelligible, return an empty string for transcript.
+  `;
+
+  const result = await model.generateContent([
+    { text: prompt },
+    {
+      inlineData: {
+        mimeType,
+        data: audioBase64,
+      },
+    } as any,
+  ]);
+  const response = await result.response;
+  const text = response.text();
+  const parsed = parseJsonObject<{ transcript: string }>(text);
+
+  return {
+    transcript: parsed.transcript?.trim() || '',
+  };
+}
+
+export async function evaluateSpeakingResponse(prompt: string, transcript: string, modelName?: string): Promise<SpeakingEvaluationResult> {
+  const model = getModel('application/json', modelName);
+
+  const systemPrompt = `
+    You are an expert TOEFL speaking grader.
+    Evaluate the response using the TOEFL speaking interview rubric.
+    Return strict JSON only.
+
+    Score rules:
+    - Use a score from 0 to 5 in 0.5-point increments only.
+    - Higher scores require clear, fluent, well-supported, and intelligible speech.
+
+    Focus your error analysis on these exact categories only:
+    - "Pronunciation and Intelligibility"
+    - "Fluency and Pausing"
+    - "Rhythm and Intonation"
+    - "Grammar and Word Choice"
+    - "Elaboration"
+    - "Idiomatic Word Choice"
+    - "Task Relevance and Content Development"
+
+    JSON shape:
+    {
+      "score": number,
+      "feedback": "overall feedback string explaining the score",
+      "errors": [
+        {
+          "type": "Pronunciation and Intelligibility" | "Fluency and Pausing" | "Rhythm and Intonation" | "Grammar and Word Choice" | "Elaboration" | "Idiomatic Word Choice" | "Task Relevance and Content Development",
+          "incorrect": "short exact span from the transcript or Missing content",
+          "suggestion": "concrete revision or improvement",
+          "explanation": "why this change improves the response"
+        }
+      ]
+    }
+
+    If the transcript is empty, entirely unintelligible, or not related to the prompt, return score 0 with at least one error if possible.
+  `;
+
+  const fullPrompt = `${systemPrompt}\n\nPrompt: ${prompt}\n\nTranscript: ${transcript}`;
+  const result = await model.generateContent(fullPrompt);
+  const response = await result.response;
+  const text = response.text();
+
+  const parsed = parseJsonObject<SpeakingEvaluationResult>(text);
   const rawScore = Number(parsed.score);
   const boundedScore = Math.min(5, Math.max(0, Number.isFinite(rawScore) ? rawScore : 0));
 
