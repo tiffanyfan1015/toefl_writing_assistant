@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
 import { Book, Check, ChevronRight, ClipboardList, MessageCircle, PenLine, Quote, ShieldCheck, Star, Users } from 'lucide-react';
-import { API_BASE_URL } from '../api';
+import { api } from '../api';
 
 const ERROR_CATEGORIES = [
   {
@@ -94,7 +93,7 @@ const ErrorLogs = () => {
 
   useEffect(() => {
     setIsLoading(true);
-    axios.get(`${API_BASE_URL}/error-logs`)
+    api.get('/error-logs')
       .then(res => setLogs(res.data))
       .catch(err => console.error(err))
       .finally(() => setIsLoading(false));
@@ -127,7 +126,7 @@ const ErrorLogs = () => {
     setLogs(prev => prev.map(item => item.id === log.id ? { ...item, important: nextImportant } : item));
 
     try {
-      const res = await axios.patch(`${API_BASE_URL}/error-logs/${log.id}/important`, {
+      const res = await api.patch(`/error-logs/${log.id}/important`, {
         important: nextImportant,
       });
       setLogs(prev => prev.map(item => item.id === log.id ? { ...item, important: res.data.important } : item));

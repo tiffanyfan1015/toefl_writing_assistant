@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { Edit3, Mail, MessageSquare, Plus, Trash2, Sparkles, X, Loader2 } from 'lucide-react';
-import { API_BASE_URL } from '../api';
+import { api } from '../api';
 
 interface Question {
   id: number;
@@ -20,7 +20,7 @@ const Dashboard = () => {
 
   const fetchQuestions = () => {
     setIsLoading(true);
-    axios.get(`${API_BASE_URL}/questions`)
+    api.get('/questions')
       .then(res => setQuestions(res.data))
       .catch(err => console.error(err))
       .finally(() => setIsLoading(false));
@@ -35,7 +35,7 @@ const Dashboard = () => {
     e.stopPropagation();
     if (window.confirm('Are you sure you want to delete this question?')) {
       try {
-        await axios.delete(`${API_BASE_URL}/questions/${id}`);
+        await api.delete(`/questions/${id}`);
         fetchQuestions();
       } catch (err) {
         console.error(err);
@@ -46,7 +46,7 @@ const Dashboard = () => {
   const handleAdd = async (autoGenerate = false) => {
     if (autoGenerate) setIsGenerating(true);
     try {
-      await axios.post(`${API_BASE_URL}/questions`, {
+      await api.post('/questions', {
         ...newQuestion,
         autoGenerate
       });

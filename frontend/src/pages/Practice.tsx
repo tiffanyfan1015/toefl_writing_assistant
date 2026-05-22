@@ -1,9 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
 import { Timer, ChevronRight, AlertTriangle, History, CheckCircle2, Loader2, Sparkles, BookOpen, Star } from 'lucide-react';
 import ReactDiffViewer from 'react-diff-viewer-continued';
-import { API_BASE_URL } from '../api';
+import { api } from '../api';
 
 interface Question {
   id: number;
@@ -46,14 +45,14 @@ const Practice = () => {
   const currentReport = selectedRevision || revisions[0];
 
   useEffect(() => {
-    axios.get(`${API_BASE_URL}/questions/${id}`)
+    api.get(`/questions/${id}`)
       .then(res => {
         setQuestion(res.data);
         if (res.data.type === 'Email') setTimeLeft(420);
         else setTimeLeft(600);
       });
 
-    axios.get(`${API_BASE_URL}/questions/${id}/latest-submission`)
+    api.get(`/questions/${id}/latest-submission`)
       .then(res => {
         if (res.data) {
           setText(res.data.currentText);
@@ -99,7 +98,7 @@ const Practice = () => {
     if (isEvaluating) return;
     setIsEvaluating(true);
     try {
-      const res = await axios.post(`${API_BASE_URL}/submissions`, {
+      const res = await api.post('/submissions', {
         questionId: parseInt(id!),
         text,
       });
@@ -142,7 +141,7 @@ const Practice = () => {
     setSelectedRevision(prev => (prev ? { ...prev, errorLogs: updateLogs(prev.errorLogs) } : prev));
 
     try {
-      const res = await axios.patch(`${API_BASE_URL}/error-logs/${errorLog.id}/important`, {
+      const res = await api.patch(`/error-logs/${errorLog.id}/important`, {
         important: nextImportant,
       });
       const savedImportant = res.data.important;

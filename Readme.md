@@ -84,8 +84,22 @@ cp .env.example .env
 ```env
 DATABASE_URL="file:./dev.db"
 GEMINI_API_KEY="YOUR-GEMINI-API-KEY-HERE"
+API_KEY="your-local-api-key"
+ALLOWED_ORIGIN="http://localhost:5173"
+BIND_ADDRESS="127.0.0.1"
 PORT=3001
 GEMINI_MODEL="gemini-flash-latest"
+```
+
+Frontend 需設定與 backend 相同的 API key：
+
+```bash
+cd frontend
+cp .env.example .env
+```
+
+```env
+VITE_API_KEY="your-local-api-key"
 ```
 
 Frontend 預設會呼叫同 hostname 的 `3001` port：
