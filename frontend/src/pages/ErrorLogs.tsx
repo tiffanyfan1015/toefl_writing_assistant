@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Book, Check, ChevronRight, ClipboardList, MessageCircle, PenLine, Quote, ShieldCheck, Star, Users } from 'lucide-react';
 import { api } from '../api';
 
@@ -41,14 +41,14 @@ const ERROR_CATEGORIES = [
   },
 ] as const;
 
-type ErrorCategory = typeof ERROR_CATEGORIES[number]['id'];
+type ErrorCategory = (typeof ERROR_CATEGORIES)[number]['id'];
 
-interface ErrorLog {
+interface ErrorLogRow {
   id: number;
   errorType: string;
   incorrect: string;
   suggestion: string;
-  explanation: string;
+  explanation: string | null;
   important: boolean;
   createdAt: string;
   revision: {
@@ -57,92 +57,90 @@ interface ErrorLog {
       question: {
         type: string;
         title: string;
-      }
-    }
-  }
+      };
+    };
+  };
 }
 
-const normalizeCategory = (type: string): ErrorCategory => {
-  const normalized = type.trim().toLowerCase();
-  if (normalized === 'grammar' || normalized === 'spelling' || normalized === 'grammar and spelling') {
-    return 'Grammar and Spelling';
-  }
-  if (normalized === 'tone' || normalized === 'social conventions' || normalized === 'tone and social conventions') {
-    return 'Tone and Social Conventions';
-  }
-  if (normalized === 'adherence' || normalized === 'task' || normalized === 'adherence to task') {
-    return 'Adherence to Task';
-  }
-  if (normalized === 'idiomatic word choice' || normalized === 'word choice' || normalized === 'idiomatic') {
-    return 'Idiomatic Word Choice';
-  }
-  if (normalized === 'relevance to discussion' || normalized === 'relevance' || normalized === 'discussion relevance') {
-    return 'Relevance to Discussion';
-  }
-  return ERROR_CATEGORIES.some(category => category.id === type) ? type as ErrorCategory : 'Elaboration';
-};
-
 const ErrorLogs = () => {
-  const [logs, setLogs] = useState<ErrorLog[]>([]);
+  const [logs, setLogs] = useState<ErrorLogRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [saveError, setSaveError] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<ErrorCategory[]>(
-    ERROR_CATEGORIES.map(category => category.id)
+    ERROR_CATEGORIES.map((category) => category.id),
   );
   const [showImportantOnly, setShowImportantOnly] = useState(false);
+  const pendingToggles = useRef(new Set<number>());
 
   useEffect(() => {
     setIsLoading(true);
-    api.get('/error-logs')
-      .then(res => setLogs(res.data))
-      .catch(err => console.error(err))
+    api
+      .get<ErrorLogRow[]>('/error-logs')
+      .then((res) => setLogs(res.data))
+      .catch((err) => console.error(err))
       .finally(() => setIsLoading(false));
   }, []);
 
   const toggleCategory = (category: ErrorCategory) => {
-    setSelectedCategories(prev => {
+    setSelectedCategories((prev) => {
       if (prev.includes(category)) {
-        return prev.length === 1 ? prev : prev.filter(item => item !== category);
+        return prev.length === 1 ? prev : prev.filter((item) => item !== category);
       }
       return [...prev, category];
     });
   };
 
-  const categoryCounts = ERROR_CATEGORIES.reduce<Record<ErrorCategory, number>>((acc, category) => {
-    acc[category.id] = logs.filter(log => normalizeCategory(log.errorType) === category.id).length;
-    return acc;
-  }, {
-    'Grammar and Spelling': 0,
-    'Elaboration': 0,
-    'Tone and Social Conventions': 0,
-    'Idiomatic Word Choice': 0,
-    'Relevance to Discussion': 0,
-    'Adherence to Task': 0,
-  });
+  const categoryCounts = ERROR_CATEGORIES.reduce<Record<ErrorCategory, number>>(
+    (acc, category) => {
+      acc[category.id] = logs.filter((log) => log.errorType === category.id).length;
+      return acc;
+    },
+    {
+      'Grammar and Spelling': 0,
+      Elaboration: 0,
+      'Tone and Social Conventions': 0,
+      'Idiomatic Word Choice': 0,
+      'Relevance to Discussion': 0,
+      'Adherence to Task': 0,
+    },
+  );
 
-  const toggleImportant = async (log: ErrorLog) => {
+  const toggleImportant = async (log: ErrorLogRow) => {
+    if (pendingToggles.current.has(log.id)) return;
+    pendingToggles.current.add(log.id);
+
     const nextImportant = !log.important;
     setSaveError('');
-    setLogs(prev => prev.map(item => item.id === log.id ? { ...item, important: nextImportant } : item));
+    setLogs((prev) =>
+      prev.map((item) => (item.id === log.id ? { ...item, important: nextImportant } : item)),
+    );
 
     try {
       const res = await api.patch(`/error-logs/${log.id}/important`, {
         important: nextImportant,
       });
-      setLogs(prev => prev.map(item => item.id === log.id ? { ...item, important: res.data.important } : item));
+      setLogs((prev) =>
+        prev.map((item) =>
+          item.id === log.id ? { ...item, important: res.data.important as boolean } : item,
+        ),
+      );
     } catch (err) {
       console.error(err);
-      setLogs(prev => prev.map(item => item.id === log.id ? { ...item, important: log.important } : item));
-      setSaveError('Could not save the star. Please restart the backend if the Prisma schema was just updated.');
+      setLogs((prev) =>
+        prev.map((item) => (item.id === log.id ? { ...item, important: log.important } : item)),
+      );
+      setSaveError('Could not save the star. Please try again.');
+    } finally {
+      pendingToggles.current.delete(log.id);
     }
   };
 
-  const visibleLogs = logs.filter(log => {
-    const matchesCategory = selectedCategories.includes(normalizeCategory(log.errorType));
+  const visibleLogs = logs.filter((log) => {
+    const matchesCategory = selectedCategories.includes(log.errorType as ErrorCategory);
     const matchesImportance = !showImportantOnly || log.important;
     return matchesCategory && matchesImportance;
   });
-  const importantCount = logs.filter(log => log.important).length;
+  const importantCount = logs.filter((log) => log.important).length;
 
   return (
     <div className="animate-fade">
@@ -171,7 +169,7 @@ const ErrorLogs = () => {
 
             <button
               className={`important-filter ${showImportantOnly ? 'is-selected' : ''}`}
-              onClick={() => setShowImportantOnly(prev => !prev)}
+              onClick={() => setShowImportantOnly((prev) => !prev)}
             >
               <Star size={18} className={showImportantOnly ? 'star-filled' : ''} />
               <span>Important only</span>
@@ -179,7 +177,7 @@ const ErrorLogs = () => {
             </button>
 
             <div className="filter-options">
-              {ERROR_CATEGORIES.map(category => {
+              {ERROR_CATEGORIES.map((category) => {
                 const Icon = category.icon;
                 const isSelected = selectedCategories.includes(category.id);
                 return (
@@ -202,65 +200,72 @@ const ErrorLogs = () => {
 
           <section className="error-results-panel">
             {logs.length === 0 ? (
-              <div className="empty-state">
-              No errors logged yet. Keep practicing!
-              </div>
+              <div className="empty-state">No errors logged yet. Keep practicing!</div>
             ) : visibleLogs.length === 0 ? (
               <div className="empty-state">No edits match the selected filters.</div>
             ) : (
-              ERROR_CATEGORIES.filter(category => selectedCategories.includes(category.id)).map(category => {
-                const categoryLogs = visibleLogs.filter(log => normalizeCategory(log.errorType) === category.id);
-                if (categoryLogs.length === 0) return null;
-                const Icon = category.icon;
+              ERROR_CATEGORIES.filter((category) => selectedCategories.includes(category.id)).map(
+                (category) => {
+                  const categoryLogs = visibleLogs.filter((log) => log.errorType === category.id);
+                  if (categoryLogs.length === 0) return null;
+                  const Icon = category.icon;
 
-                return (
-                  <div key={category.id} className="error-category-section">
-                    <div className="error-category-heading">
-                      <div className="category-icon">
-                        <Icon size={19} />
+                  return (
+                    <div key={category.id} className="error-category-section">
+                      <div className="error-category-heading">
+                        <div className="category-icon">
+                          <Icon size={19} />
+                        </div>
+                        <div>
+                          <h2>{category.label}</h2>
+                          <p>{category.description}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h2>{category.label}</h2>
-                        <p>{category.description}</p>
+
+                      <div className="error-card-list">
+                        {categoryLogs.map((log, index) => (
+                          <article
+                            key={log.id}
+                            className={`error-edit-card category-${category.id.replaceAll(' ', '-').toLowerCase()}`}
+                          >
+                            <div className="edit-card-topline">
+                              <span className="edit-number">{index + 1}</span>
+                              <span className="task-pill">{log.revision.submission.question.type}</span>
+                              <span className="edit-date">
+                                {new Date(log.createdAt).toLocaleDateString()}
+                              </span>
+                              <button
+                                className={`star-button ${log.important ? 'is-important' : ''}`}
+                                onClick={() => toggleImportant(log)}
+                                aria-label={
+                                  log.important ? 'Remove important mark' : 'Mark as important'
+                                }
+                              >
+                                <Star size={17} />
+                              </button>
+                            </div>
+
+                            <div className="edit-comparison">
+                              <span className="edit-incorrect">{log.incorrect}</span>
+                              <ChevronRight size={17} className="edit-arrow" />
+                              <span className="edit-suggestion">{log.suggestion}</span>
+                            </div>
+
+                            {log.explanation && (
+                              <p className="edit-explanation">{log.explanation}</p>
+                            )}
+
+                            <div className="edit-source">
+                              <Book size={14} />
+                              <span>{log.revision.submission.question.title}</span>
+                            </div>
+                          </article>
+                        ))}
                       </div>
                     </div>
-
-                    <div className="error-card-list">
-                      {categoryLogs.map((log, index) => (
-                        <article key={log.id} className={`error-edit-card category-${category.id.replaceAll(' ', '-').toLowerCase()}`}>
-                          <div className="edit-card-topline">
-                            <span className="edit-number">{index + 1}</span>
-                            <span className="task-pill">{log.revision.submission.question.type}</span>
-                            <span className="edit-date">{new Date(log.createdAt).toLocaleDateString()}</span>
-                            <button
-                              className={`star-button ${log.important ? 'is-important' : ''}`}
-                              onClick={() => toggleImportant(log)}
-                              aria-label={log.important ? 'Remove important mark' : 'Mark as important'}
-                            >
-                              <Star size={17} />
-                            </button>
-                          </div>
-
-                          <div className="edit-comparison">
-                            <span className="edit-incorrect">{log.incorrect}</span>
-                            <ChevronRight size={17} className="edit-arrow" />
-                            <span className="edit-suggestion">{log.suggestion}</span>
-                          </div>
-
-                          {log.explanation && (
-                            <p className="edit-explanation">{log.explanation}</p>
-                          )}
-
-                          <div className="edit-source">
-                            <Book size={14} />
-                            <span>{log.revision.submission.question.title}</span>
-                          </div>
-                        </article>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })
+                  );
+                },
+              )
             )}
           </section>
         </div>

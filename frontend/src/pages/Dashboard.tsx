@@ -3,13 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { Edit3, Mail, MessageSquare, Plus, Trash2, Sparkles, X, Loader2 } from 'lucide-react';
 import { api } from '../api';
-
-interface Question {
-  id: number;
-  type: string;
-  title: string;
-  content: string;
-}
+import type { Question } from '../types';
 
 const Dashboard = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -39,6 +33,10 @@ const Dashboard = () => {
         fetchQuestions();
       } catch (err) {
         console.error(err);
+        const message = axios.isAxiosError(err)
+          ? err.response?.data?.error || err.message
+          : 'Failed to delete question';
+        alert(`Failed to delete question: ${message}`);
       }
     }
   };

@@ -1,8 +1,13 @@
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useParams } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import Practice from './pages/Practice';
 import ErrorLogs from './pages/ErrorLogs';
 import { BookOpen, AlertTriangle, Sparkles } from 'lucide-react';
+
+function PracticeRoute() {
+  const { id } = useParams();
+  return <Practice key={id} />;
+}
 
 function App() {
   return (
@@ -31,7 +36,7 @@ function App() {
         <main className="container">
           <Routes>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/practice/:id" element={<Practice />} />
+            <Route path="/practice/:id" element={<PracticeRoute />} />
             <Route path="/errors" element={<ErrorLogs />} />
           </Routes>
         </main>
