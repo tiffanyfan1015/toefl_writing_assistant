@@ -1,9 +1,4 @@
-import axios from 'axios';
-
-const GEMINI_MODEL_STORAGE_KEY = 'gemini-model';
-const GEMINI_MODEL_HEADER = 'X-Gemini-Model';
-
-type StoredGeminiHeaders = Record<string, string>;
+import axios from "axios";
 
 const getApiBaseUrl = () => {
   if (import.meta.env.VITE_API_URL) {
@@ -13,43 +8,53 @@ const getApiBaseUrl = () => {
   return `http://${hostname}:3001/api`;
 };
 
-const applyGeminiModelHeader = (model: string) => {
-  const headers = axios.defaults.headers.common as StoredGeminiHeaders;
+const apiKey = import.meta.env.VITE_API_KEY;
+
+if (!apiKey || typeof apiKey !== "string") {
+  throw new Error(
+    "VITE_API_KEY is not set. Copy frontend/.env.example to frontend/.env and set the same value as backend API_KEY.",
+  );
+}
+
+const GEMINI_MODEL_STORAGE_KEY = "gemini-model";
+const GEMINI_MODEL_HEADER = "X-Gemini-Model";
+
+export const api = axios.create({
+  baseURL: getApiBaseUrl(),
+  headers: {
+    Authorization: `Bearer ${apiKey}`,
+  },
+});
+
+// Interceptor to add Gemini model header from localStorage
+api.interceptors.request.use((config) => {
+  const model = window.localStorage.getItem(GEMINI_MODEL_STORAGE_KEY);
   if (model) {
-    headers[GEMINI_MODEL_HEADER] = model;
-  } else {
-    delete headers[GEMINI_MODEL_HEADER];
+    config.headers[GEMINI_MODEL_HEADER] = model;
+  }
+  return config;
+});
+
+export const getGeminiModel = () => {
+  if (typeof window === "undefined") return "";
+  return window.localStorage.getItem(GEMINI_MODEL_STORAGE_KEY) || "";
+};
+
+export const setGeminiModel = (model: string) => {
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(GEMINI_MODEL_STORAGE_KEY, model);
   }
 };
-
-const getStoredGeminiModel = () => {
-  if (typeof window === 'undefined') return '';
-  return window.localStorage.getItem(GEMINI_MODEL_STORAGE_KEY) || '';
-};
-
-const storedGeminiModel = getStoredGeminiModel();
-if (storedGeminiModel) {
-  applyGeminiModelHeader(storedGeminiModel);
-}
 
 export interface GeminiModelConfig {
   options: string[];
   defaultModel: string;
 }
 
-export const getGeminiModel = () => getStoredGeminiModel();
-
-export const setGeminiModel = (model: string) => {
-  if (typeof window !== 'undefined') {
-    window.localStorage.setItem(GEMINI_MODEL_STORAGE_KEY, model);
-  }
-  applyGeminiModelHeader(model);
-};
-
 export const API_BASE_URL = getApiBaseUrl();
-export const API_ORIGIN = API_BASE_URL.replace(/\/api$/, '');
+export const API_ORIGIN = API_BASE_URL.replace(/\/api$/, "");
 
 export const toPublicUrl = (path: string) => {
-  if (!path) return '';
+  if (!path) return "";
   return new URL(path, API_BASE_URL).toString();
 };

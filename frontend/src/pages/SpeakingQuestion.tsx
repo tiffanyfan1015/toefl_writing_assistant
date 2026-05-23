@@ -1,8 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import axios from 'axios';
-import { ChevronDown, ChevronRight, Loader2, Mic, Play, Sparkles } from 'lucide-react';
-import { API_BASE_URL } from '../api';
+import { useEffect, useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import {
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  Mic,
+  Play,
+  Sparkles,
+} from "lucide-react";
+import { api } from "../api";
 
 interface SpeakingQuestion {
   id: number;
@@ -55,7 +61,7 @@ const getPromptText = (question: SpeakingQuestion, partIndex: number) => {
     case 4:
       return question.question4;
     default:
-      return '';
+      return "";
   }
 };
 
@@ -78,8 +84,8 @@ const SpeakingQuestionPage = () => {
     setIsLoading(true);
     try {
       const [questionRes, sessionsRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/speaking/questions/${id}`),
-        axios.get(`${API_BASE_URL}/speaking/questions/${id}/sessions`),
+        api.get(`/speaking/questions/${id}`),
+        api.get(`/speaking/questions/${id}/sessions`),
       ]);
       setQuestion(questionRes.data);
       setSessions(sessionsRes.data);
@@ -104,10 +110,17 @@ const SpeakingQuestionPage = () => {
     if (!sessions.length) return [];
 
     return [1, 2, 3, 4].map((partIndex) => {
-      const attempts = sessions.filter((session) => session.parts.some((part) => part.partIndex === partIndex)).length;
+      const attempts = sessions.filter((session) =>
+        session.parts.some((part) => part.partIndex === partIndex),
+      ).length;
       const latestScore = sessions
-        .flatMap((session) => session.parts.filter((part) => part.partIndex === partIndex))
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]?.score ?? null;
+        .flatMap((session) =>
+          session.parts.filter((part) => part.partIndex === partIndex),
+        )
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )[0]?.score ?? null;
 
       return {
         partIndex,
@@ -121,12 +134,14 @@ const SpeakingQuestionPage = () => {
   const speakText = (text: string, partIndex: number) => {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-US';
+    utterance.lang = "en-US";
     utterance.rate = 1;
     utterance.pitch = 1;
     utterance.onstart = () => setPlayingPartIndex(partIndex);
-    utterance.onend = () => setPlayingPartIndex((current) => (current === partIndex ? null : current));
-    utterance.onerror = () => setPlayingPartIndex((current) => (current === partIndex ? null : current));
+    utterance.onend = () =>
+      setPlayingPartIndex((current) => (current === partIndex ? null : current));
+    utterance.onerror = () =>
+      setPlayingPartIndex((current) => (current === partIndex ? null : current));
     window.speechSynthesis.speak(utterance);
   };
 
@@ -164,15 +179,29 @@ const SpeakingQuestionPage = () => {
         <section className="card speaking-prompt-card">
           <div className="section-heading">
             <h2>Prompt</h2>
-            <button className="toggle-button" onClick={() => setShowPrompt((prev) => !prev)}>
-              {showPrompt ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-              {showPrompt ? 'Hide text' : 'Show text'}
+            <button
+              className="toggle-button"
+              onClick={() => setShowPrompt((prev) => !prev)}
+            >
+              {showPrompt ? (
+                <ChevronDown size={16} />
+              ) : (
+                <ChevronRight size={16} />
+              )}
+              {showPrompt ? "Hide text" : "Show text"}
             </button>
           </div>
 
           <div className="speaking-prompt-summary">
-            <button className="speech-play-button" onClick={() => handleReplayPrompt(0)}>
-              {playingPartIndex === 0 ? <Loader2 className="animate-spin" size={16} /> : <Play size={16} />}
+            <button
+              className="speech-play-button"
+              onClick={() => handleReplayPrompt(0)}
+            >
+              {playingPartIndex === 0 ? (
+                <Loader2 className="animate-spin" size={16} />
+              ) : (
+                <Play size={16} />
+              )}
               Play Introduction
             </button>
             <p>{question.introduction}</p>
@@ -185,9 +214,18 @@ const SpeakingQuestionPage = () => {
                 return (
                   <div key={partIndex} className="speaking-prompt-item">
                     <div className="speaking-prompt-item-header">
-                      <span className="task-pill speaking-pill"><Mic size={14} /> Q{partIndex}</span>
-                      <button className="speech-play-button small" onClick={() => handleReplayPrompt(partIndex)}>
-                        {playingPartIndex === partIndex ? <Loader2 className="animate-spin" size={14} /> : <Play size={14} />}
+                      <span className="task-pill speaking-pill">
+                        <Mic size={14} /> Q{partIndex}
+                      </span>
+                      <button
+                        className="speech-play-button small"
+                        onClick={() => handleReplayPrompt(partIndex)}
+                      >
+                        {playingPartIndex === partIndex ? (
+                          <Loader2 className="animate-spin" size={14} />
+                        ) : (
+                          <Play size={14} />
+                        )}
                         Replay
                       </button>
                     </div>
@@ -209,10 +247,16 @@ const SpeakingQuestionPage = () => {
           ) : (
             <div className="speaking-history-summary-grid">
               {historyGroups.map((group) => (
-                <Link key={group.partIndex} to={`/speaking/${question.id}/history/${group.partIndex}`} className="speaking-history-summary-card">
+                <Link
+                  key={group.partIndex}
+                  to={`/speaking/${question.id}/history/${group.partIndex}`}
+                  className="speaking-history-summary-card"
+                >
                   <div className="speaking-history-summary-card-top">
                     <div>
-                      <span className="task-pill speaking-pill">{group.label}</span>
+                      <span className="task-pill speaking-pill">
+                        {group.label}
+                      </span>
                       <h3>View attempt history</h3>
                     </div>
                     <ChevronRight size={18} />
@@ -224,7 +268,7 @@ const SpeakingQuestionPage = () => {
                     </div>
                     <div>
                       <span>Latest score</span>
-                      <strong>{group.latestScore ?? '-'}</strong>
+                      <strong>{group.latestScore ?? "-"}</strong>
                     </div>
                   </div>
                 </Link>
@@ -237,12 +281,19 @@ const SpeakingQuestionPage = () => {
       <div className="speaking-part-quickstart">
         <h2>Practice shortcuts</h2>
         <div className="speaking-quick-grid">
-          <Link to={`/speaking/${question.id}/practice`} className="speaking-quick-card">
+          <Link
+            to={`/speaking/${question.id}/practice`}
+            className="speaking-quick-card"
+          >
             <Sparkles size={18} />
             <span>Practice All</span>
           </Link>
           {[1, 2, 3, 4].map((partIndex) => (
-            <Link key={partIndex} to={`/speaking/${question.id}/practice?part=${partIndex}`} className="speaking-quick-card">
+            <Link
+              key={partIndex}
+              to={`/speaking/${question.id}/practice?part=${partIndex}`}
+              className="speaking-quick-card"
+            >
               <Mic size={18} />
               <span>Practice Question {partIndex}</span>
             </Link>

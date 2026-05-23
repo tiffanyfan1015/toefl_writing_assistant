@@ -1,8 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import axios from 'axios';
-import { ArrowLeft, ChevronRight, Loader2, Mic, Play, Sparkles, Trash2 } from 'lucide-react';
-import { API_BASE_URL, toPublicUrl } from '../api';
+import { useEffect, useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  ChevronRight,
+  Loader2,
+  Mic,
+  Play,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
+import { api, toPublicUrl } from "../api";
 
 interface SpeakingQuestion {
   id: number;
@@ -55,26 +62,26 @@ const getPromptText = (question: SpeakingQuestion, partIndex: number) => {
     case 4:
       return question.question4;
     default:
-      return '';
+      return "";
   }
 };
 
 const SpeakingHistoryPage = () => {
   const { id, partIndex } = useParams();
-  const targetPartIndex = Number.parseInt(partIndex ?? '', 10);
+  const targetPartIndex = Number.parseInt(partIndex ?? "", 10);
 
   const [question, setQuestion] = useState<SpeakingQuestion | null>(null);
   const [sessions, setSessions] = useState<SpeakingSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [playingPartIndex, setPlayingPartIndex] = useState<number | null>(null);
-  const [saveError, setSaveError] = useState('');
+  const [saveError, setSaveError] = useState("");
 
   const loadData = async () => {
     setIsLoading(true);
     try {
       const [questionRes, sessionsRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/speaking/questions/${id}`),
-        axios.get(`${API_BASE_URL}/speaking/questions/${id}/sessions`),
+        api.get(`/speaking/questions/${id}`),
+        api.get(`/speaking/questions/${id}/sessions`),
       ]);
       setQuestion(questionRes.data);
       setSessions(sessionsRes.data);
@@ -105,13 +112,19 @@ const SpeakingHistoryPage = () => {
             sessionId: session.id,
             sessionCreatedAt: session.createdAt,
             part,
-          }))
+          })),
       )
-      .sort((a, b) => new Date(b.sessionCreatedAt).getTime() - new Date(a.sessionCreatedAt).getTime());
+      .sort(
+        (a, b) =>
+          new Date(b.sessionCreatedAt).getTime() -
+          new Date(a.sessionCreatedAt).getTime(),
+      );
   }, [sessions, targetPartIndex]);
 
   const stats = useMemo(() => {
-    const scores = attempts.map((attempt) => attempt.part.score).filter((score): score is number => score !== null);
+    const scores = attempts
+      .map((attempt) => attempt.part.score)
+      .filter((score): score is number => score !== null);
     const latestScore = attempts[0]?.part.score ?? null;
     const bestScore = scores.length ? Math.max(...scores) : null;
 
@@ -126,12 +139,14 @@ const SpeakingHistoryPage = () => {
     if (!question) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-US';
+    utterance.lang = "en-US";
     utterance.rate = 1;
     utterance.pitch = 1;
     utterance.onstart = () => setPlayingPartIndex(index);
-    utterance.onend = () => setPlayingPartIndex((current) => (current === index ? null : current));
-    utterance.onerror = () => setPlayingPartIndex((current) => (current === index ? null : current));
+    utterance.onend = () =>
+      setPlayingPartIndex((current) => (current === index ? null : current));
+    utterance.onerror = () =>
+      setPlayingPartIndex((current) => (current === index ? null : current));
     window.speechSynthesis.speak(utterance);
   };
 
@@ -141,15 +156,18 @@ const SpeakingHistoryPage = () => {
   };
 
   const handleDeleteHistoryItem = async (partId: number) => {
-    if (!window.confirm('Delete this history item? This cannot be undone.')) return;
+    if (!window.confirm("Delete this history item? This cannot be undone."))
+      return;
 
-    setSaveError('');
+    setSaveError("");
     try {
-      await axios.delete(`${API_BASE_URL}/speaking/parts/${partId}`);
+      await api.delete(`/speaking/parts/${partId}`);
       await loadData();
     } catch (err) {
       console.error(err);
-      setSaveError('Could not delete this history item. Please check the backend connection and try again.');
+      setSaveError(
+        "Could not delete this history item. Please check the backend connection and try again.",
+      );
     }
   };
 
@@ -161,14 +179,18 @@ const SpeakingHistoryPage = () => {
     );
   }
 
-  const promptTitle = Number.isFinite(targetPartIndex) ? `Question ${targetPartIndex}` : 'History';
+  const promptTitle = Number.isFinite(targetPartIndex)
+    ? `Question ${targetPartIndex}`
+    : "History";
 
   return (
     <div className="animate-fade speaking-history-page">
       <section className="history-hero card">
         <div className="history-hero-main">
           <div className="history-hero-topline">
-            <span className="history-badge"><Mic size={14} /> Speaking History</span>
+            <span className="history-badge">
+              <Mic size={14} /> Speaking History
+            </span>
             <span className="history-subtle">{promptTitle}</span>
           </div>
           <h1>{question.title}</h1>
@@ -180,7 +202,10 @@ const SpeakingHistoryPage = () => {
               Back to topic
             </button>
           </Link>
-          <Link to={`/speaking/${question.id}/practice?part=${targetPartIndex}`} className="history-practice-link">
+          <Link
+            to={`/speaking/${question.id}/practice?part=${targetPartIndex}`}
+            className="history-practice-link"
+          >
             <button className="btn-cta">
               <Sparkles size={18} />
               Practice again
@@ -193,16 +218,18 @@ const SpeakingHistoryPage = () => {
         <article className="history-stat-card card">
           <span className="history-stat-label">Attempts</span>
           <strong>{stats.count}</strong>
-          <span className="history-stat-copy">Recorded tries for this question</span>
+          <span className="history-stat-copy">
+            Recorded tries for this question
+          </span>
         </article>
         <article className="history-stat-card card">
           <span className="history-stat-label">Latest</span>
-          <strong>{stats.latestScore ?? '-'}</strong>
+          <strong>{stats.latestScore ?? "-"}</strong>
           <span className="history-stat-copy">Most recent score</span>
         </article>
         <article className="history-stat-card card">
           <span className="history-stat-label">Best</span>
-          <strong>{stats.bestScore ?? '-'}</strong>
+          <strong>{stats.bestScore ?? "-"}</strong>
           <span className="history-stat-copy">Highest recorded score</span>
         </article>
       </section>
@@ -214,8 +241,16 @@ const SpeakingHistoryPage = () => {
           <div>
             <h2>Attempt Timeline</h2>
           </div>
-          <button className="speech-play-button" onClick={handleReplayPrompt} disabled={!Number.isFinite(targetPartIndex)}>
-            {playingPartIndex === targetPartIndex ? <Loader2 className="animate-spin" size={16} /> : <Play size={16} />}
+          <button
+            className="speech-play-button"
+            onClick={handleReplayPrompt}
+            disabled={!Number.isFinite(targetPartIndex)}
+          >
+            {playingPartIndex === targetPartIndex ? (
+              <Loader2 className="animate-spin" size={16} />
+            ) : (
+              <Play size={16} />
+            )}
             Replay prompt
           </button>
         </div>
@@ -237,36 +272,59 @@ const SpeakingHistoryPage = () => {
               <article key={part.id} className="history-attempt-card">
                 <div className="history-attempt-topline">
                   <div>
-                    <span className="history-attempt-index">Attempt {attempts.length - index}</span>
+                    <span className="history-attempt-index">
+                      Attempt {attempts.length - index}
+                    </span>
                     <h3>Session #{sessionId}</h3>
                     <p>{new Date(sessionCreatedAt).toLocaleString()}</p>
                   </div>
                   <div className="history-attempt-score">
                     <span>Score</span>
-                    <strong>{part.score ?? '-'}</strong>
+                    <strong>{part.score ?? "-"}</strong>
                   </div>
                 </div>
 
                 <div className="history-attempt-actions">
-                  <button className="speech-play-button small" onClick={() => speakText(getPromptText(question, targetPartIndex), targetPartIndex)}>
+                  <button
+                    className="speech-play-button small"
+                    onClick={() =>
+                      speakText(
+                        getPromptText(question, targetPartIndex),
+                        targetPartIndex,
+                      )
+                    }
+                  >
                     <Play size={14} />
                     Replay prompt
                   </button>
-                  <Link to={`/speaking/${question.id}/practice?part=${targetPartIndex}`}>
-                    <button className="speech-secondary-button small">Re-answer</button>
+                  <Link
+                    to={`/speaking/${question.id}/practice?part=${targetPartIndex}`}
+                  >
+                    <button className="speech-secondary-button small">
+                      Re-answer
+                    </button>
                   </Link>
-                  <button className="speech-secondary-button small history-delete-button" onClick={() => handleDeleteHistoryItem(part.id)}>
+                  <button
+                    className="speech-secondary-button small history-delete-button"
+                    onClick={() => handleDeleteHistoryItem(part.id)}
+                  >
                     <Trash2 size={14} />
                     Delete
                   </button>
                 </div>
 
-                <audio className="speaking-audio" controls src={toPublicUrl(part.audioPath)} />
+                <audio
+                  className="speaking-audio"
+                  controls
+                  src={toPublicUrl(part.audioPath)}
+                />
 
                 <div className="history-detail-stack">
                   <div className="history-detail-block">
                     <p className="speaking-transcript-label">Transcript</p>
-                    <p className="history-detail-text">{part.transcript || 'No transcript available.'}</p>
+                    <p className="history-detail-text">
+                      {part.transcript || "No transcript available."}
+                    </p>
                   </div>
 
                   {part.feedback && (
@@ -279,21 +337,37 @@ const SpeakingHistoryPage = () => {
                   <div className="history-detail-block">
                     <p className="speaking-transcript-label">Error Log</p>
                     {part.errorLogs.length === 0 ? (
-                      <div className="empty-state compact">No errors detected.</div>
+                      <div className="empty-state compact">
+                        No errors detected.
+                      </div>
                     ) : (
                       <div className="speaking-errors">
                         {part.errorLogs.map((error) => (
                           <div key={error.id} className="speaking-error-card">
                             <div className="edit-card-topline">
-                              <span className="error-type-badge">{error.errorType}</span>
-                              {error.important && <span className="important-chip">Important</span>}
+                              <span className="error-type-badge">
+                                {error.errorType}
+                              </span>
+                              {error.important && (
+                                <span className="important-chip">
+                                  Important
+                                </span>
+                              )}
                             </div>
                             <div className="edit-comparison">
-                              <span className="edit-incorrect">{error.incorrect}</span>
+                              <span className="edit-incorrect">
+                                {error.incorrect}
+                              </span>
                               <ChevronRight size={17} className="edit-arrow" />
-                              <span className="edit-suggestion">{error.suggestion}</span>
+                              <span className="edit-suggestion">
+                                {error.suggestion}
+                              </span>
                             </div>
-                            {error.explanation && <p className="edit-explanation">{error.explanation}</p>}
+                            {error.explanation && (
+                              <p className="edit-explanation">
+                                {error.explanation}
+                              </p>
+                            )}
                           </div>
                         ))}
                       </div>

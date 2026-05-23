@@ -1,31 +1,52 @@
-import { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, NavLink } from 'react-router-dom';
-import axios from 'axios';
-import Dashboard from './pages/Dashboard';
-import Practice from './pages/Practice';
-import ErrorLogs from './pages/ErrorLogs';
-import SpeakingDashboard from './pages/SpeakingDashboard';
-import SpeakingQuestion from './pages/SpeakingQuestion';
-import SpeakingPractice from './pages/SpeakingPractice';
-import SpeakingHistory from './pages/SpeakingHistory';
-import SpeakingErrorLogs from './pages/SpeakingErrorLogs';
-import { BookOpen, AlertTriangle, Sparkles, Mic, PanelTopOpen } from 'lucide-react';
-import { API_BASE_URL, getGeminiModel, setGeminiModel, type GeminiModelConfig } from './api';
+import { useEffect, useState } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Link,
+  NavLink,
+  useParams,
+} from "react-router-dom";
+import Dashboard from "./pages/Dashboard";
+import Practice from "./pages/Practice";
+import ErrorLogs from "./pages/ErrorLogs";
+import SpeakingDashboard from "./pages/SpeakingDashboard";
+import SpeakingQuestion from "./pages/SpeakingQuestion";
+import SpeakingPractice from "./pages/SpeakingPractice";
+import SpeakingHistory from "./pages/SpeakingHistory";
+import SpeakingErrorLogs from "./pages/SpeakingErrorLogs";
+import {
+  BookOpen,
+  AlertTriangle,
+  Sparkles,
+  Mic,
+  PanelTopOpen,
+} from "lucide-react";
+import { api, getGeminiModel, setGeminiModel, type GeminiModelConfig } from "./api";
+
+function PracticeRoute() {
+  const { id } = useParams();
+  return <Practice key={id} />;
+}
 
 function App() {
-  const [geminiConfig, setGeminiConfig] = useState<GeminiModelConfig | null>(null);
+  const [geminiConfig, setGeminiConfig] = useState<GeminiModelConfig | null>(
+    null,
+  );
   const [activeGeminiModel, setActiveGeminiModel] = useState(getGeminiModel());
 
   useEffect(() => {
-    axios.get(`${API_BASE_URL}/gemini-models`)
+    api
+      .get("/gemini-models")
       .then((res) => {
         const config = res.data as GeminiModelConfig;
         setGeminiConfig(config);
 
         const storedModel = getGeminiModel();
-        const initialModel = storedModel && config.options.includes(storedModel)
-          ? storedModel
-          : config.defaultModel;
+        const initialModel =
+          storedModel && config.options.includes(storedModel)
+            ? storedModel
+            : config.defaultModel;
 
         setActiveGeminiModel(initialModel);
         setGeminiModel(initialModel);
@@ -35,7 +56,9 @@ function App() {
       });
   }, []);
 
-  const handleGeminiModelChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleGeminiModelChange = (
+    event: React.ChangeEvent<HTMLSelectElement>,
+  ) => {
     const nextModel = event.target.value;
     setActiveGeminiModel(nextModel);
     setGeminiModel(nextModel);
@@ -52,19 +75,41 @@ function App() {
             </Link>
 
             <div className="nav-pills">
-              <NavLink to="/" end className={({ isActive }) => `nav-pill ${isActive ? 'is-active' : ''}`}>
+              <NavLink
+                to="/"
+                end
+                className={({ isActive }) =>
+                  `nav-pill ${isActive ? "is-active" : ""}`
+                }
+              >
                 <BookOpen size={16} />
                 <span>Writing</span>
               </NavLink>
-              <NavLink to="/speaking" end className={({ isActive }) => `nav-pill ${isActive ? 'is-active' : ''}`}>
+              <NavLink
+                to="/speaking"
+                end
+                className={({ isActive }) =>
+                  `nav-pill ${isActive ? "is-active" : ""}`
+                }
+              >
                 <Mic size={16} />
                 <span>Speaking</span>
               </NavLink>
-              <NavLink to="/errors" className={({ isActive }) => `nav-pill ${isActive ? 'is-active' : ''}`}>
+              <NavLink
+                to="/errors"
+                className={({ isActive }) =>
+                  `nav-pill ${isActive ? "is-active" : ""}`
+                }
+              >
                 <AlertTriangle size={16} />
                 <span>Writing Errors</span>
               </NavLink>
-              <NavLink to="/speaking/errors" className={({ isActive }) => `nav-pill ${isActive ? 'is-active' : ''}`}>
+              <NavLink
+                to="/speaking/errors"
+                className={({ isActive }) =>
+                  `nav-pill ${isActive ? "is-active" : ""}`
+                }
+              >
                 <PanelTopOpen size={16} />
                 <span>Speaking Errors</span>
               </NavLink>
@@ -75,17 +120,19 @@ function App() {
               <select
                 id="gemini-model-select"
                 className="gemini-model-select"
-                value={activeGeminiModel || geminiConfig?.defaultModel || ''}
+                value={activeGeminiModel || geminiConfig?.defaultModel || ""}
                 onChange={handleGeminiModelChange}
                 disabled={!geminiConfig}
               >
                 {!geminiConfig ? (
                   <option value="">Loading model options...</option>
-                ) : geminiConfig.options.map((model) => (
-                  <option key={model} value={model}>
-                    {model}
-                  </option>
-                ))}
+                ) : (
+                  geminiConfig.options.map((model) => (
+                    <option key={model} value={model}>
+                      {model}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
           </div>
@@ -94,12 +141,18 @@ function App() {
         <main className="container">
           <Routes>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/practice/:id" element={<Practice />} />
+            <Route path="/practice/:id" element={<PracticeRoute />} />
             <Route path="/errors" element={<ErrorLogs />} />
             <Route path="/speaking" element={<SpeakingDashboard />} />
             <Route path="/speaking/:id" element={<SpeakingQuestion />} />
-            <Route path="/speaking/:id/practice" element={<SpeakingPractice />} />
-            <Route path="/speaking/:id/history/:partIndex" element={<SpeakingHistory />} />
+            <Route
+              path="/speaking/:id/practice"
+              element={<SpeakingPractice />}
+            />
+            <Route
+              path="/speaking/:id/history/:partIndex"
+              element={<SpeakingHistory />}
+            />
             <Route path="/speaking/errors" element={<SpeakingErrorLogs />} />
           </Routes>
         </main>

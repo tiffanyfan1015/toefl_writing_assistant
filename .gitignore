@@ -28,3 +28,7 @@ node_modules
 /backend/dist
 
 /tmp
+
+# Python virtual environments
+venv/
+**/venv/
