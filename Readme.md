@@ -1,83 +1,77 @@
-# Writing Assistant for TOEFL
+# TOEFL Assistant: Writing & Speaking
 
-TOEFL Writing Assistant 是一個練習 TOEFL Writing 題型的全端專案。使用者可以建立 Email Response 與 Academic Discussion 題目，進入打字練習介面，送出後由 Gemini AI 依 TOEFL 評分標準給分、提供修改建議，並保留每次修改紀錄與文法/拼字/內容發展等錯誤分類。
+**TOEFL Assistant** is an AI-powered prep platform designed for TOEFL candidates. Integrated with Google’s Gemini AI, the platform automates question generation, delivers a seamless practice environment, and provides instant, AI-driven scoring and actionable feedback.
 
-## 功能
+Currently, the platform supports two core modules: Writing (including Email and Academic Discussion) and Speaking (Interview format).
 
-- 區分 `Email` 與 `Academic Discussion` 兩種 TOEFL Writing 題型
-- 題目可手動新增，也可透過 Gemini AI 自動產生
-- 題目列表支援刪除與進入練習
-- 每題有獨立寫作介面、倒數計時、題目顯示區與字數統計
-- 每次儲存後會建立 revision，保留歷史版本
-- 使用 diff viewer 顯示目前文章與歷史版本的差異
-- Gemini AI 依題型 rubric 評分並提供整體 feedback
-- 錯誤紀錄頁會依主題分類：
-  - Grammar and Spelling
-  - Elaboration
-  - Tone and Social Conventions
-  - Adherence to Task
+## 核心功能
+
+### ✍️ TOEFL Writing
+- **雙題型支援**：`Email Response` 與 `Academic Discussion`。
+- **AI 自動命題**：可手動輸入題目，或由 Gemini 產生符合 TOEFL 難度的模擬題。
+- **寫作實驗室**：提供打字練習區、倒數計時、字數統計及即時草稿存檔。
+- **深度評分**：Gemini 依官方 Rubric 給分（0.5 分級），提供整體回饋並標記語法、內容發展等錯誤。
+- **版本對比**：保留每次寫作紀錄 (Revisions)，並使用 Diff Viewer 顯示修改差異。
+
+### 🎙️ TOEFL Speaking (Interview)
+- **模擬口說面試**：AI 產生包含 Introduction 與 4 個延伸問題的連續面試題目。
+- **語音互動**：系統自動透過 TTS (Text-to-Speech) 讀取 AI 考官題目。
+- **即時錄音與轉錄**：支援瀏覽器錄音，並由 AI 自動將語音轉為文字 (Transcription)。
+- **口說診斷**：針對 Pronunciation, Fluency, Grammar, Elaboration 等維度進行分析。
+- **歷史紀錄**：可回聽錄音檔、查看 AI 評分與改進建議。
 
 ## 技術架構
 
 ### Frontend
-
-- React
-- TypeScript
-- Vite
-- React Router
-- Axios
-- Lucide React
-- react-diff-viewer-continued
+- **Framework**: React (TypeScript) + Vite
+- **Routing**: React Router 7
+- **Icons**: Lucide React
+- **HTTP**: Axios (封裝帶有 Authorization 驗證與模型切換攔截器)
+- **UI Components**: Vanilla CSS (現代化卡片式設計)
 
 ### Backend
-
-- Node.js
-- Express
-- TypeScript
-- Prisma
-- SQLite
-- Gemini API (`@google/generative-ai`)
+- **Runtime**: Node.js (Express)
+- **Language**: TypeScript (tsx)
+- **Database**: Prisma + SQLite
+- **AI Engine**: Google Gemini API (`@google/generative-ai`)
+- **Validation**: Zod (嚴格校驗 AI 回傳之 JSON 格式)
 
 ## 專案結構
 
 ```text
 writing_assistant/
   backend/
-    prisma/
-      schema.prisma
-      seed.ts
-    src/
-      index.ts
-      services/gemini.ts
-    .env.example
-    package.json
+    prisma/schema.prisma     # 資料庫模型 (Writing + Speaking)
+    src/index.ts             # API 路由與驗證中介軟體
+    src/services/gemini.ts   # Gemini AI 核心邏輯 (Zod, Timeout, Prompt)
+    scripts/                 # API Key 產生工具
+    uploads/speaking/        # 使用者口說錄音存檔 (.webm)
   frontend/
-    src/
-      pages/
-        Dashboard.tsx
-        Practice.tsx
-        ErrorLogs.tsx
-      api.ts
-      index.css
-    package.json
-  spec.md
-  Readme.md
+    src/api.ts               # API 請求封裝
+    src/pages/               # 頁面組件 (包含 Speaking 系列)
+    src/types.ts             # 統一型別定義
 ```
 
 ## 環境需求
-
-- Node.js
+- Node.js (建議 v18 以上)
 - npm
-- Gemini API key
+- Google Gemini API Key (可至 [Google AI Studio](https://aistudio.google.com/apikey) 申請)
 
-## 環境變數
+## 快速開始
 
-先建立 backend 環境變數檔：
+### 1. 設定環境變數
 
+後端設定 (`backend/.env`)：
 ```bash
 cd backend
 cp .env.example .env
 ```
+使用工具產生 API 通行證：
+```bash
+npm run gen-api-key -- --write
+```
+*這會自動在 `.env` 中填入 `API_KEY`。  
+記得手動填入你的 `GEMINI_API_KEY`。*
 
 `backend/.env` 範例：
 
@@ -89,18 +83,18 @@ ALLOWED_ORIGIN="http://localhost:5173"
 BIND_ADDRESS="127.0.0.1"
 PORT=3001
 GEMINI_MODEL="gemini-flash-latest"
+GEMINI_MODEL_OPTIONS="gemini-flash-latest,gemini-3.1-flash-lite"
 ```
 
-Frontend 需設定與 backend 相同的 API key：
-
+前端設定 (`frontend/.env`)：
 ```bash
 cd frontend
 cp .env.example .env
 ```
-
 ```env
 VITE_API_KEY="your-local-api-key"
 ```
+*請確保 `VITE_API_KEY` 與後端的 `API_KEY` 完全一致。*
 
 Frontend 預設會呼叫同 hostname 的 `3001` port：
 
@@ -114,24 +108,17 @@ http://<frontend-host>:3001/api
 VITE_API_URL="http://localhost:3001/api"
 ```
 
-## 安裝
+### 2. 安裝與啟動
 
-分別安裝 backend 與 frontend dependencies：
-
+安裝依賴：
 ```bash
-cd backend
-npm install
+# 後端
+cd backend && npm install
+# 前端
+cd frontend && npm install
 ```
 
-```bash
-cd frontend
-npm install
-```
-
-## 初始化資料庫
-
-在 backend 目錄執行：
-
+初始化資料庫：
 ```bash
 cd backend
 npx prisma generate
@@ -143,8 +130,6 @@ npx prisma db push
 ```bash
 npx tsx prisma/seed.ts
 ```
-
-## 啟動開發環境
 
 啟動 backend：
 
@@ -158,7 +143,6 @@ npm run dev
 ```text
 http://localhost:3001
 ```
-
 啟動 frontend：
 
 ```bash
@@ -192,35 +176,33 @@ npx prisma db push
 npx prisma studio
 ```
 
-## TOEFL 評分方向
+- `npm run gen-api-key`: 產生前後端通訊金鑰。
+- `npm test`: 執行 Vitest 測試（後端含 Gemini 邏輯測試）。
+- `npx prisma studio`: 可視化管理資料庫內容。
 
-系統會依題型使用不同評分重點。
 
-Email Response 重點包含：
+## 評分標準與錯誤分類
 
-- 是否完成 email 任務要求
-- 是否有足夠 elaboration
-- 語氣、禮貌、register 與 email conventions 是否自然
-- 文法、拼字、句構與用字是否穩定
-
-Academic Discussion 重點包含：
-
-- 是否回應教授問題
-- 是否表達並支持自己的觀點
-- 是否對討論有具體貢獻
-- 是否有清楚的例子、解釋與細節
-- 語言準確度與自然度
-
-## 錯誤分類
-
-AI feedback 會把修改建議分成下列主題（後端會正規化成固定字串）：
-
-- `Grammar and Spelling`: 文法、拼字、標點、字形、時態、句構
+### Writing 錯誤分類
+- `Grammar and Spelling`: 文法、拼字、時態、句構。
 - `Elaboration`: 例子、細節、論點發展與說明完整度
 - `Tone and Social Conventions`: 禮貌、語氣、email 格式、討論禮儀
-- `Idiomatic Word Choice`: 用字、搭配、慣用語與自然度
+- `Idiomatic Word Choice`: 用字自然度與慣用語。
 - `Relevance to Discussion`: 是否回應教授與同學的討論脈絡
 - `Adherence to Task`: 是否漏答題目要求、離題或沒有回應 prompt
+
+### Speaking 錯誤分類
+- `Pronunciation and Intelligibility`: 發音清晰度。
+- `Fluency and Pausing`: 流暢度與停頓。
+- `Rhythm and Intonation`: 語調與節奏。
+- `Grammar and Word Choice`: 口說文法與選字。
+- `Elaboration`: 內容深度。
+
+## API 安全性
+所有 API 請求均受 `requireApiKey` 保護，必須在 Header 帶上：
+`Authorization: Bearer <API_KEY>`
+
+系統支援在前端切換 Gemini 模型（Flash/Pro），透過 `X-Gemini-Model` Header 傳遞給後端。
 
 ## HTTP API
 

@@ -17,6 +17,20 @@ async function main() {
       },
     ],
   });
+
+  await prisma.speakingQuestion.createMany({
+    data: [
+      {
+        title: 'Remote Work and Productivity',
+        introduction: 'You have agreed to take part in a research study about remote work. You will have a short online interview with a researcher. The researcher will ask you some questions.',
+        question1: 'Think back to the last time you worked from somewhere other than your regular workplace. Why did you choose that location, and what did you like about it?',
+        question2: 'Some people find remote work freeing, while others feel distracted or lonely. How do you usually react to remote work, and why?',
+        question3: 'Do you think remote workers usually have a better work-life balance? Why or why not?',
+        question4: 'Some researchers believe companies should invest more in virtual social events to help remote teams feel connected. Do you agree? Why or why not?',
+      },
+    ],
+  });
+
   console.log('Seeding finished.');
 }
 
