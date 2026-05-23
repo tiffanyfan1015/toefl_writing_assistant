@@ -21,7 +21,7 @@ model Question {
 
 model Submission {
   id          Int                  @id @default(autoincrement())
-  questionId  Int
+  questionId  Int                  @unique
   question    Question             @relation(fields: [questionId], references: [id])
   currentText String
   latestScore Float?
