@@ -239,7 +239,13 @@ Authorization: Bearer <API_KEY>
 **Response `200`:** `Question[]`
 
 ```json
-{ "id": 1, "type": "Email", "title": "...", "content": "...", "createdAt": "..." }
+{
+  "id": 1,
+  "type": "Email",
+  "title": "...",
+  "content": "...",
+  "createdAt": "..."
+}
 ```
 
 ### `GET /api/questions/:id`
@@ -301,7 +307,12 @@ Authorization: Bearer <API_KEY>
 
 ```json
 {
-  "submission": { "id": 1, "questionId": 1, "currentText": "...", "revisions": [] },
+  "submission": {
+    "id": 1,
+    "questionId": 1,
+    "currentText": "...",
+    "revisions": []
+  },
   "evaluation": { "score": 4, "feedback": "...", "errors": [] },
   "evaluationFailed": false
 }
