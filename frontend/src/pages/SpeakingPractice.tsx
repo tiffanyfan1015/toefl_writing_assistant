@@ -520,7 +520,7 @@ const SpeakingPractice = () => {
 
           <aside className="card practice-sidebar">
             <div className="practice-timer-box">
-              <span className="practice-status-label">Recording timer</span>
+              <span className="practice-status-label">Recording timer </span>
               <strong>{countdown > 0 ? `${countdown}s` : "--"}</strong>
             </div>
             <div className="practice-actions-stack">
