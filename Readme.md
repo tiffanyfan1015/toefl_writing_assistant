@@ -68,7 +68,7 @@ cp .env.example .env
 ```
 使用工具產生 API 通行證：
 ```bash
-npm run gen-api-key -- --write
+npm run generate-api-key -- --write
 ```
 *這會自動在 `.env` 中填入 `API_KEY`。  
 記得手動填入你的 `GEMINI_API_KEY`。*
@@ -176,7 +176,7 @@ npx prisma db push
 npx prisma studio
 ```
 
-- `npm run gen-api-key`: 產生前後端通訊金鑰。
+- `npm run generate-api-key`: 產生前後端通訊金鑰。
 - `npm test`: 執行 Vitest 測試（後端含 Gemini 邏輯測試）。
 - `npx prisma studio`: 可視化管理資料庫內容。
 
