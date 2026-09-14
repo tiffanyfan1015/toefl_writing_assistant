@@ -104,7 +104,9 @@ export function WritingFindBar({
           onKeyDown={(e) => {
             if (e.key === "Escape") {
               e.preventDefault();
+              e.stopPropagation();
               onClose();
+              return;
             }
             if (e.key === "Enter") {
               e.preventDefault();

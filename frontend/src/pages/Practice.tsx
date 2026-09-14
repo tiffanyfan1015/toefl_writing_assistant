@@ -43,6 +43,7 @@ const Practice = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const pendingToggles = useRef(new Set<number>());
   const appliedDeepLinkRef = useRef<string | null>(null);
+  const suppressReportScrollRef = useRef(false);
   const textRef = useRef(text);
   const latestRevisionIdRef = useRef<number | null>(null);
   const selectedRevisionRef = useRef(selectedRevision);
@@ -54,6 +55,7 @@ const Practice = () => {
 
   const currentReport = selectedRevision ?? revisions[0];
   const invalidLink = !id || Number.isNaN(questionId);
+  const searchParamsKey = searchParams.toString();
 
   useEffect(() => {
     if (invalidLink) return;
@@ -105,8 +107,16 @@ const Practice = () => {
 
   useEffect(() => {
     if (!currentReport?.id) return;
+    if (parseWritingSearchDeepLink(searchParamsKey)) {
+      suppressReportScrollRef.current = true;
+      return;
+    }
+    if (suppressReportScrollRef.current) {
+      suppressReportScrollRef.current = false;
+      return;
+    }
     reportRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [currentReport?.id]);
+  }, [currentReport?.id, searchParamsKey]);
 
   useEffect(() => {
     if (Number.isNaN(questionId)) return;
@@ -123,7 +133,7 @@ const Practice = () => {
   }, [questionId, registerEditorFind]);
 
   useEffect(() => {
-    const deepLinkKey = searchParams.toString();
+    const deepLinkKey = searchParamsKey;
     const deepLink = parseWritingSearchDeepLink(deepLinkKey);
     if (!deepLink) {
       appliedDeepLinkRef.current = null;
@@ -180,7 +190,7 @@ const Practice = () => {
     }
 
     setSearchParams({}, { replace: true });
-  }, [revisions, searchParams, setSearchParams]);
+  }, [revisions, searchParamsKey, setSearchParams]);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);

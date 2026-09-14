@@ -15,7 +15,7 @@ describe("WritingSearchHighlight", () => {
 
     const marks = container.querySelectorAll("mark");
     expect(marks).toHaveLength(2);
-    expect(marks[0]).not.toHaveClass("is-active-match");
-    expect(marks[1]).toHaveClass("is-active-match");
+    expect(marks[0]?.classList.contains("is-active-match")).toBe(false);
+    expect(marks[1]?.classList.contains("is-active-match")).toBe(true);
   });
 });

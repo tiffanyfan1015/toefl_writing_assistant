@@ -116,6 +116,19 @@ export function WritingFindProvider({ children }: WritingFindProviderProps) {
   }, [writingRoute]);
 
   useEffect(() => {
+    if (!open || !writingRoute) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      closeFind();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, writingRoute, closeFind]);
+
+  useEffect(() => {
     syncEditorHighlight();
   }, [syncEditorHighlight]);
 
