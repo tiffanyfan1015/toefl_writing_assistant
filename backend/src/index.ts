@@ -17,6 +17,11 @@ import {
 } from "./services/gemini.js";
 import { requireApiKey } from "./middleware/auth.js";
 import { normalizeErrorType } from "./lib/errorTypes.js";
+import {
+  findWritingMatches,
+  groupRevisionsByQuestion,
+  validateWritingSearchQuery,
+} from "./lib/writingSearch.js";
 
 dotenv.config();
 
@@ -419,6 +424,56 @@ app.post("/api/submissions", async (req, res) => {
   }
 });
 
+app.get("/api/writing-search", async (req, res) => {
+  const query = validateWritingSearchQuery(
+    typeof req.query.q === "string" ? req.query.q : undefined,
+  );
+
+  if (!query) {
+    return res.status(400).json({ error: "Invalid search query" });
+  }
+
+  try {
+    const revisions = await prisma.submissionRevision.findMany({
+      select: {
+        id: true,
+        text: true,
+        createdAt: true,
+        submissionId: true,
+        submission: {
+          select: {
+            questionId: true,
+            question: {
+              select: {
+                title: true,
+                type: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const rows = groupRevisionsByQuestion(
+      revisions.map((revision) => ({
+        revisionId: revision.id,
+        revisionText: revision.text,
+        revisionCreatedAt: revision.createdAt,
+        submissionId: revision.submissionId,
+        questionId: revision.submission.questionId,
+        questionTitle: revision.submission.question.title,
+        questionType: revision.submission.question.type,
+      })),
+    );
+
+    res.json(findWritingMatches(query, rows));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to search writing" });
+  }
+});
+
 app.get("/api/error-logs", async (_req, res) => {
   try {
     const logs = await prisma.errorLog.findMany({
@@ -536,7 +591,9 @@ app.post("/api/speaking/questions", async (req, res) => {
       !ensureString(nextQuestion3) ||
       !ensureString(nextQuestion4)
     ) {
-      return res.status(400).json({ error: "Missing speaking question fields" });
+      return res
+        .status(400)
+        .json({ error: "Missing speaking question fields" });
     }
 
     const speakingQuestion = await prisma.speakingQuestion.create({

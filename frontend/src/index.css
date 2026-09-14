@@ -478,6 +478,34 @@ nav.main-nav {
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
 }
 
+.essay-textarea-stack {
+  position: relative;
+}
+
+.essay-find-highlight-layer {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: 14px;
+}
+
+.essay-find-highlight-layer-inner {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 28px 28px 64px;
+  border: 1px solid transparent;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--color-text);
+  will-change: transform;
+}
+
 .essay-textarea {
   width: 100%;
   min-height: 500px;
@@ -498,6 +526,15 @@ nav.main-nav {
 .essay-textarea:focus {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 4px rgba(8, 145, 178, 0.1);
+}
+
+.essay-textarea.has-find-highlights {
+  background: transparent;
+  position: relative;
+  z-index: 1;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  caret-color: var(--color-text);
 }
 
 .word-count-badge {
@@ -2113,4 +2150,217 @@ nav.main-nav {
   .btn-cta {
     width: 100%;
   }
+}
+
+.writing-find-bar {
+  position: fixed;
+  top: 76px;
+  right: 20px;
+  left: auto;
+  transform: none;
+  z-index: 1000;
+  width: min(360px, calc(100vw - 32px));
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-card-bg);
+  color: var(--color-text);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.1);
+}
+
+.writing-find-bar button {
+  font-weight: 400;
+}
+
+.writing-find-bar button:hover:not(:disabled) {
+  opacity: 1;
+  transform: none;
+}
+
+.writing-find-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+}
+
+.writing-find-bar:not(.is-compact) .writing-find-controls {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.writing-find-icon {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.writing-find-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 0.875rem;
+}
+
+.writing-find-input::placeholder {
+  color: var(--color-muted);
+}
+
+.writing-find-count {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 3.5rem;
+  text-align: right;
+}
+
+.writing-find-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+
+.writing-find-bar .icon-button {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-muted);
+}
+
+.writing-find-bar .icon-button:hover:not(:disabled) {
+  opacity: 1;
+  transform: none;
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--color-text);
+}
+
+.writing-find-bar .icon-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.writing-find-results {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.writing-find-status,
+.writing-find-error {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.writing-find-error {
+  color: #dc2626;
+}
+
+.writing-find-result {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text);
+}
+
+.writing-find-result:last-child {
+  border-bottom: none;
+}
+
+.writing-find-result:hover:not(:disabled) {
+  background: #f8fafc;
+}
+
+.writing-find-result.is-active {
+  background: rgba(8, 145, 178, 0.08);
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+.writing-find-result-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.writing-find-result-meta strong {
+  color: var(--color-text);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 0.8rem;
+}
+
+.writing-find-result-snippet {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--color-text);
+}
+
+.writing-find-result-snippet mark,
+.writing-search-highlight mark,
+.essay-find-highlight-layer mark {
+  background-color: #fef3c7;
+  color: #1e293b;
+  padding: 0;
+  border-radius: 0;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.writing-find-result-snippet mark.is-active-match,
+.writing-search-highlight mark.is-active-match,
+.essay-find-highlight-layer mark.is-active-match {
+  background-color: #fde68a;
+  color: #1e293b;
+}
+
+.essay-textarea.has-find-highlights::selection {
+  background-color: #fde68a;
+  color: #1e293b;
+  -webkit-text-fill-color: #1e293b;
+}
+
+.essay-textarea.has-find-highlights::-moz-selection {
+  background-color: #fde68a;
+  color: #1e293b;
+}
+
+.writing-search-highlight {
+  margin-bottom: 16px;
+}
+
+.writing-search-highlight-label {
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.writing-search-highlight-text {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.65;
+  font-size: 0.95rem;
+  color: var(--color-text);
 }
